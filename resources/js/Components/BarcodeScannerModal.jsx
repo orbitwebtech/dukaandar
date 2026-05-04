@@ -10,10 +10,14 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
     const readerRef = useRef(null);
     const detectorIntervalRef = useRef(null);
     const streamRef = useRef(null);
+    // Once a code is decoded (or the modal closes), this ref blocks any
+    // in-flight ZXing callbacks / BarcodeDetector polls from firing again.
+    const dispatchedRef = useRef(false);
     const [phase, setPhase] = useState('idle');
     const [errorDetail, setErrorDetail] = useState(null);
 
     const stopAll = () => {
+        dispatchedRef.current = true;
         if (readerRef.current) {
             try { readerRef.current.reset(); } catch {}
             readerRef.current = null;
@@ -30,6 +34,8 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
 
     const handleDecoded = (text) => {
         if (!text) return;
+        if (dispatchedRef.current) return; // already fired for this modal session
+        dispatchedRef.current = true;
         stopAll();
         onScan(text);
         onClose();
@@ -38,6 +44,8 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
     const startScanner = async () => {
         setErrorDetail(null);
         stopAll();
+        // Re-arm for this fresh session AFTER stopAll (which sets dispatchedRef=true).
+        dispatchedRef.current = false;
 
         if (!navigator.mediaDevices?.getUserMedia) {
             setPhase('unsupported');
@@ -84,9 +92,11 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
 
                 setPhase('scanning');
                 detectorIntervalRef.current = setInterval(async () => {
+                    if (dispatchedRef.current) return;
                     if (!videoRef.current || videoRef.current.readyState < 2) return;
                     try {
                         const codes = await detector.detect(videoRef.current);
+                        if (dispatchedRef.current) return; // closed while detect() was in flight
                         if (codes && codes.length > 0 && codes[0].rawValue) {
                             handleDecoded(codes[0].rawValue);
                         }
