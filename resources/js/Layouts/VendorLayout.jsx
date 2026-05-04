@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
     LayoutDashboard, Users, Package, ShoppingCart,
-    BarChart3, TrendingUp, Tag, Settings,
+    BarChart3, TrendingUp, Tag, Settings, ShoppingBag,
     Menu, X, LogOut, ChevronDown, Store, Building2, UserCog, Wallet
 } from 'lucide-react';
 import { useStorePath, useCan } from '@/lib/storePath';
@@ -21,6 +21,7 @@ export default function VendorLayout({ children, title }) {
         { name: 'Customers', href: url('/customers'), icon: Users, show: can('customers.read') },
         { name: 'Products', href: url('/products'), icon: Package, show: can('products.read') },
         { name: 'Orders', href: url('/orders'), icon: ShoppingCart, show: can('orders.read') },
+        { name: 'Purchases', href: url('/purchases'), icon: ShoppingBag, show: can('purchases.read') },
         { name: 'Inventory Reports', href: url('/reports/inventory'), icon: BarChart3, show: can('reports.read') },
         { name: 'Sales Reports', href: url('/reports/sales'), icon: TrendingUp, show: can('reports.read') },
         { name: 'Coupons', href: url('/coupons'), icon: Tag, show: can('coupons.read') },

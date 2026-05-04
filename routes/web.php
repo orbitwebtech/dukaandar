@@ -11,6 +11,7 @@ use App\Http\Controllers\Vendor\ProductController;
 use App\Http\Controllers\Vendor\CategoryController;
 use App\Http\Controllers\Vendor\OrderController;
 use App\Http\Controllers\Vendor\CouponController;
+use App\Http\Controllers\Vendor\PurchaseController;
 use App\Http\Controllers\Vendor\SettingController;
 use App\Http\Controllers\Vendor\ReportController;
 use App\Http\Controllers\Org\ExpenseController as OrgExpenseController;
@@ -172,6 +173,20 @@ Route::prefix('store/{store}')->middleware(['auth', 'verified', 'system_role:mem
         ->middleware('store.can:coupons.update')->name('coupons.toggle');
     Route::post('/coupons/validate', [CouponController::class, 'validate'])
         ->middleware('store.can:orders.create')->name('coupons.validate');
+
+    // Purchases
+    Route::get('/purchases', [PurchaseController::class, 'index'])
+        ->middleware('store.can:purchases.read')->name('purchases.index');
+    Route::get('/purchases/create', [PurchaseController::class, 'create'])
+        ->middleware('store.can:purchases.create')->name('purchases.create');
+    Route::post('/purchases', [PurchaseController::class, 'store'])
+        ->middleware('store.can:purchases.create')->name('purchases.store');
+    Route::get('/purchases/{purchase}/edit', [PurchaseController::class, 'edit'])
+        ->middleware('store.can:purchases.update')->name('purchases.edit');
+    Route::put('/purchases/{purchase}', [PurchaseController::class, 'update'])
+        ->middleware('store.can:purchases.update')->name('purchases.update');
+    Route::delete('/purchases/{purchase}', [PurchaseController::class, 'destroy'])
+        ->middleware('store.can:purchases.delete')->name('purchases.destroy');
 
 // Reports
     Route::get('/reports/inventory', [ReportController::class, 'inventory'])

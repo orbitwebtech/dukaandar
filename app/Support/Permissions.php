@@ -6,7 +6,7 @@ class Permissions
 {
     public const RESOURCES = [
         'products', 'categories', 'customers', 'orders',
-        'coupons', 'reports', 'settings',
+        'coupons', 'purchases', 'reports', 'settings',
     ];
 
     public const ACTIONS = ['create', 'read', 'update', 'delete'];
@@ -33,7 +33,7 @@ class Permissions
         return match ($role) {
             'owner' => self::all(),
             'manager' => array_merge(
-                self::crudFor(['products', 'categories', 'customers', 'orders', 'coupons']),
+                self::crudFor(['products', 'categories', 'customers', 'orders', 'coupons', 'purchases']),
                 ['reports.read', 'settings.read', 'settings.update', 'team.invite']
             ),
             'employee' => [
@@ -41,6 +41,7 @@ class Permissions
                 'categories.read',
                 'customers.create', 'customers.read', 'customers.update',
                 'orders.create', 'orders.read', 'orders.update',
+                'purchases.read',
                 'reports.read',
             ],
             default => [],
