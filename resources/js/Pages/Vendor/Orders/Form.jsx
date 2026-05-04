@@ -7,7 +7,7 @@ import SearchableSelect from '@/Components/SearchableSelect';
 import TextInput from '@/Components/TextInput';
 import Label from '@/Components/Label';
 import Button from '@/Components/Button';
-import { Plus, Trash2, UserPlus, ShoppingCart, X, Camera } from 'lucide-react';
+import { Plus, Trash2, UserPlus, ShoppingCart, X, Camera, Percent } from 'lucide-react';
 import BarcodeScannerModal from '@/Components/BarcodeScannerModal';
 
 const formatCurrency = (amount) =>
@@ -39,6 +39,184 @@ const emptyItem = () => ({
     line_discount_type: 'flat',
     line_discount_value: 0,
 });
+
+function variantLabel(v) {
+    if (!v) return '';
+    if (!v.attributes) return `Variant ${v.id}`;
+    if (typeof v.attributes !== 'object') return String(v.attributes);
+    return Object.entries(v.attributes).map(([k, val]) => `${k}: ${val}`).join(' · ');
+}
+
+function ItemRow({ item, idx, products, productOptions, allItems, allErrors, updateItem, removeItem, handleProductChange, handleVariantChange, isEdit, order, canRemove }) {
+    const [discountOpen, setDiscountOpen] = useState(
+        Number(item.line_discount_value || 0) > 0
+    );
+
+    const selectedProduct = products.find((p) => p.id === item.product_id);
+    const isVariable = selectedProduct?.type === 'variable' && selectedProduct?.variants?.length > 0;
+    const selectedVariant = isVariable ? selectedProduct.variants.find(v => v.id === item.variant_id) : null;
+
+    const usedVariantIds = allItems
+        .filter(other => other._key !== item._key && other.product_id === item.product_id && other.variant_id)
+        .map(other => other.variant_id);
+    const variantOptions = isVariable
+        ? selectedProduct.variants
+            .filter(v => v.id === item.variant_id || !usedVariantIds.includes(v.id))
+            .map((v) => ({ value: v.id, label: variantLabel(v) }))
+        : [];
+
+    const lineTotal = calcLineTotal(item.qty, item.unit_price, item.line_discount_type, item.line_discount_value);
+
+    // Available stock (factor in this order's existing qty if editing a delivered order)
+    const existingItem = isEdit && order.status === 'delivered'
+        ? order.items?.find(oi => oi.product_id === item.product_id && (oi.variant_id ?? null) === (item.variant_id ?? null))
+        : null;
+    const reservedQty = existingItem ? Number(existingItem.qty) || 0 : 0;
+    let availableStock = null;
+    if (selectedProduct && selectedProduct.type === 'simple') {
+        availableStock = (Number(selectedProduct.stock_qty) || 0) + reservedQty;
+    } else if (item.variant_id && selectedProduct?.variants?.length) {
+        const v = selectedProduct.variants.find(x => x.id === item.variant_id);
+        if (v) availableStock = (Number(v.stock_qty) || 0) + reservedQty;
+    }
+    const overStock = availableStock !== null && Number(item.qty) > availableStock;
+    const outOfStock = availableStock !== null && availableStock <= 0;
+    const stockHint = availableStock !== null
+        ? (outOfStock ? 'OUT' : `${availableStock} in stock`)
+        : null;
+
+    // Empty / un-picked row → render the full pickers (manual entry mode)
+    if (!item.product_id) {
+        return (
+            <div className="rounded-lg border border-dashed border-gray-300 bg-white p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-500">Item {idx + 1}</span>
+                    {canRemove && (
+                        <button type="button" onClick={() => removeItem(item._key)} className="rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50">
+                            <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+                </div>
+                <SearchableSelect
+                    options={productOptions}
+                    value={null}
+                    onChange={(opt) => handleProductChange(item._key, opt)}
+                    placeholder="Search product…"
+                    error={allErrors[`items.${idx}.product_id`]}
+                />
+            </div>
+        );
+    }
+
+    return (
+        <div className={`rounded-lg border ${overStock || outOfStock ? 'border-red-200 bg-red-50/30' : 'border-gray-200 bg-white'} px-3 py-2`}>
+            <div className="flex items-start gap-2">
+                {/* Index number */}
+                <span className="text-xs font-semibold text-gray-400 mt-2 w-5 text-right shrink-0">{idx + 1}.</span>
+
+                {/* Product info */}
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{selectedProduct?.name || 'Unknown product'}</p>
+                    {isVariable && (
+                        <div className="mt-0.5">
+                            {variantOptions.length > 1 || !selectedVariant ? (
+                                <select
+                                    value={item.variant_id || ''}
+                                    onChange={(e) => handleVariantChange(item._key, variantOptions.find(o => String(o.value) === e.target.value), item.product_id)}
+                                    className="text-xs rounded border border-gray-200 px-1.5 py-0.5 bg-white"
+                                >
+                                    <option value="">Pick variant…</option>
+                                    {variantOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                </select>
+                            ) : (
+                                <span className="text-xs text-gray-500">{variantLabel(selectedVariant)}</span>
+                            )}
+                            {allErrors[`items.${idx}.variant_id`] && (
+                                <p className="text-[10px] text-red-600 mt-0.5">{allErrors[`items.${idx}.variant_id`]}</p>
+                            )}
+                        </div>
+                    )}
+                    {stockHint && (
+                        <p className={`text-[10px] mt-0.5 ${outOfStock ? 'text-red-600 font-medium' : overStock ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
+                            {outOfStock ? 'Out of stock' : overStock ? `Only ${availableStock} in stock` : stockHint}
+                        </p>
+                    )}
+                </div>
+
+                {/* Compact qty + price + total */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex flex-col items-center">
+                        <span className="text-[9px] text-gray-400 uppercase">Qty</span>
+                        <input
+                            type="number"
+                            min="1"
+                            max={availableStock !== null ? availableStock : undefined}
+                            value={item.qty}
+                            onChange={(e) => updateItem(item._key, { qty: parseInt(e.target.value) || 1 })}
+                            className={`w-14 rounded border px-1.5 py-1 text-sm text-center ${overStock ? 'border-red-300' : 'border-gray-300'} focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none`}
+                        />
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <span className="text-[9px] text-gray-400 uppercase">Price</span>
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.unit_price}
+                            onChange={(e) => updateItem(item._key, { unit_price: e.target.value })}
+                            className="w-20 rounded border border-gray-300 px-1.5 py-1 text-sm text-right focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
+                        />
+                    </div>
+                    <div className="flex flex-col items-end ml-1">
+                        <span className="text-[9px] text-gray-400 uppercase">Total</span>
+                        <span className="text-sm font-semibold text-gray-900 px-1 py-1">{formatCurrency(lineTotal)}</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setDiscountOpen(o => !o)}
+                        className={`mt-3 rounded p-1 ${discountOpen ? 'text-primary-600 bg-primary-50' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'}`}
+                        title="Toggle line discount"
+                    >
+                        <Percent className="h-3.5 w-3.5" />
+                    </button>
+                    {canRemove && (
+                        <button
+                            type="button"
+                            onClick={() => removeItem(item._key)}
+                            className="mt-3 rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                            title="Remove"
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {discountOpen && (
+                <div className="mt-2 ml-7 flex items-center gap-2 pt-2 border-t border-gray-100">
+                    <span className="text-[10px] text-gray-500 uppercase">Line Discount</span>
+                    <select
+                        value={item.line_discount_type}
+                        onChange={(e) => updateItem(item._key, { line_discount_type: e.target.value })}
+                        className="rounded border border-gray-300 px-1.5 py-1 text-xs"
+                    >
+                        <option value="flat">Flat ₹</option>
+                        <option value="percent">%</option>
+                    </select>
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.line_discount_value}
+                        onChange={(e) => updateItem(item._key, { line_discount_value: e.target.value })}
+                        className="w-20 rounded border border-gray-300 px-1.5 py-1 text-xs text-right"
+                        placeholder="0"
+                    />
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function Form({ customers = [], products = [], nextOrderNumber, settings, order }) {
     const url = useStorePath();
@@ -493,154 +671,25 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                         <p className="mt-1.5 text-[11px] text-gray-500">USB scanner: just scan — it'll type the code and submit automatically. Tablet: tap Camera.</p>
                     </div>
 
-                    <div className="space-y-4">
-                        {data.items.map((item, idx) => {
-                            const selectedProduct = products.find((p) => p.id === item.product_id);
-                            const isVariable = selectedProduct?.type === 'variable' && selectedProduct?.variants?.length > 0;
-                            // Variants picked by OTHER rows for the same product — exclude them from this row's dropdown
-                            const usedVariantIds = data.items
-                                .filter(other => other._key !== item._key && other.product_id === item.product_id && other.variant_id)
-                                .map(other => other.variant_id);
-                            const variantOptions = isVariable
-                                ? selectedProduct.variants
-                                    .filter(v => v.id === item.variant_id || !usedVariantIds.includes(v.id))
-                                    .map((v) => ({
-                                        value: v.id,
-                                        label: v.attributes
-                                            ? (typeof v.attributes === 'object'
-                                                ? Object.entries(v.attributes).map(([k, val]) => `${k}: ${val}`).join(', ')
-                                                : String(v.attributes))
-                                            : `Variant ${v.id}`,
-                                    }))
-                                : [];
-
-                            const lineTotal = calcLineTotal(item.qty, item.unit_price, item.line_discount_type, item.line_discount_value);
-
-                            // Available stock for this item (factor in this order's existing qty if editing a delivered order)
-                            const existingItem = isEdit && order.status === 'delivered'
-                                ? order.items?.find(oi =>
-                                    oi.product_id === item.product_id &&
-                                    (oi.variant_id ?? null) === (item.variant_id ?? null))
-                                : null;
-                            const reservedQty = existingItem ? Number(existingItem.qty) || 0 : 0;
-                            let availableStock = null;
-                            if (selectedProduct && selectedProduct.type === 'simple') {
-                                availableStock = (Number(selectedProduct.stock_qty) || 0) + reservedQty;
-                            } else if (item.variant_id && selectedProduct?.variants?.length) {
-                                const v = selectedProduct.variants.find(x => x.id === item.variant_id);
-                                if (v) availableStock = (Number(v.stock_qty) || 0) + reservedQty;
-                            }
-                            const overStock = availableStock !== null && Number(item.qty) > availableStock;
-                            const outOfStock = availableStock !== null && availableStock <= 0;
-
-                            return (
-                                <div
-                                    key={item._key}
-                                    className="rounded-lg border border-gray-200 bg-gray-50/40 p-4 space-y-3"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                            Item {idx + 1}
-                                        </span>
-                                        {data.items.length > 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => removeItem(item._key)}
-                                                className="rounded-lg p-1 text-red-400 hover:bg-red-50 hover:text-red-600 transition"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* Product select */}
-                                    <div>
-                                        <Label required>Product</Label>
-                                        <SearchableSelect
-                                            options={productOptions}
-                                            value={productOptions.find((o) => o.value === item.product_id) || null}
-                                            onChange={(opt) => handleProductChange(item._key, opt)}
-                                            placeholder="Search product..."
-                                            error={allErrors[`items.${idx}.product_id`]}
-                                        />
-                                    </div>
-
-                                    {/* Variant select (only for variable products) */}
-                                    {isVariable && (
-                                        <div>
-                                            <Label required>Variant</Label>
-                                            <SearchableSelect
-                                                options={variantOptions}
-                                                value={variantOptions.find((o) => o.value === item.variant_id) || null}
-                                                onChange={(opt) => handleVariantChange(item._key, opt, item.product_id)}
-                                                placeholder="Select variant..."
-                                                error={allErrors[`items.${idx}.variant_id`]}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Qty + Price + Discount */}
-                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                        <div>
-                                            <Label required>
-                                                Qty
-                                                {availableStock !== null && (
-                                                    <span className={`ml-1 text-[10px] font-normal ${outOfStock ? 'text-red-600' : overStock ? 'text-amber-600' : 'text-gray-400'}`}>
-                                                        {outOfStock ? '(out of stock)' : `(${availableStock} available)`}
-                                                    </span>
-                                                )}
-                                            </Label>
-                                            <TextInput
-                                                type="number"
-                                                min="1"
-                                                max={availableStock !== null ? availableStock : undefined}
-                                                value={item.qty}
-                                                onChange={(e) => updateItem(item._key, { qty: parseInt(e.target.value) || 1 })}
-                                                error={allErrors[`items.${idx}.qty`] || (overStock ? `Only ${availableStock} in stock` : null)}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label required>Unit Price (₹)</Label>
-                                            <TextInput
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={item.unit_price}
-                                                onChange={(e) => updateItem(item._key, { unit_price: e.target.value })}
-                                                error={allErrors[`items.${idx}.unit_price`]}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label>Discount</Label>
-                                            <select
-                                                value={item.line_discount_type}
-                                                onChange={(e) => updateItem(item._key, { line_discount_type: e.target.value })}
-                                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition"
-                                            >
-                                                <option value="flat">Flat (₹)</option>
-                                                <option value="percent">Percent (%)</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <Label>Value</Label>
-                                            <TextInput
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                value={item.line_discount_value}
-                                                onChange={(e) => updateItem(item._key, { line_discount_value: e.target.value })}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex justify-end">
-                                        <span className="text-sm font-semibold text-gray-700">
-                                            Line Total: <span className="text-primary-700">{formatCurrency(lineTotal)}</span>
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                    <div className="space-y-2">
+                        {data.items.map((item, idx) => (
+                            <ItemRow
+                                key={item._key}
+                                item={item}
+                                idx={idx}
+                                products={products}
+                                productOptions={productOptions}
+                                allItems={data.items}
+                                allErrors={allErrors}
+                                updateItem={updateItem}
+                                removeItem={removeItem}
+                                handleProductChange={handleProductChange}
+                                handleVariantChange={handleVariantChange}
+                                isEdit={isEdit}
+                                order={order}
+                                canRemove={data.items.length > 1}
+                            />
+                        ))}
                     </div>
 
                     <button

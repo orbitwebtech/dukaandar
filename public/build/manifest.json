@@ -320,7 +320,7 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-DprJs9Ub.css",
+    "file": "assets/app-CE2VI68L.css",
     "name": "app",
     "names": [
       "app.css"
@@ -629,7 +629,7 @@
     ]
   },
   "resources/js/Pages/Vendor/Orders/Form.jsx": {
-    "file": "assets/Form-9VJj7gnL.js",
+    "file": "assets/Form-vRexqwMa.js",
     "name": "Form",
     "src": "resources/js/Pages/Vendor/Orders/Form.jsx",
     "isDynamicEntry": true,
@@ -815,7 +815,7 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-CkrYsblQ.js",
+    "file": "assets/app-BigD3xyc.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
@@ -855,7 +855,7 @@
       "resources/js/Pages/Vendor/Settings/Index.jsx"
     ],
     "css": [
-      "assets/app-DprJs9Ub.css"
+      "assets/app-CE2VI68L.css"
     ]
   }
 }
