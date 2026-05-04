@@ -7,7 +7,7 @@ import Label from '@/Components/Label';
 import Button from '@/Components/Button';
 import { ArrowLeft } from 'lucide-react';
 
-const SUGGESTED = ['Parcel charge', 'Stock purchase', 'Salary', 'Tea / Snacks', 'Internet', 'Electricity', 'Rent', 'Packaging', 'Repairs', 'Marketing'];
+const SUGGESTED = ['Parcel charge', 'Stock purchase', 'Salary', 'Tea / Snacks', 'Internet', 'Electricity', 'Rent', 'Packaging', 'Repairs', 'Marketing', 'Other'];
 
 export default function ExpenseForm({ expense, stores = [], categories = [] }) {
     const isEdit = !!expense;
