@@ -2,17 +2,42 @@ import { useEffect, useRef, useState } from 'react';
 import Modal from '@/Components/Modal';
 import { X, Camera, AlertCircle } from 'lucide-react';
 
-// 'idle' = nothing started yet, 'requesting' = awaiting permission prompt,
-// 'denied' = user said no (or no camera available), 'starting' = scanner booting,
-// 'scanning' = camera active, 'unsupported' = browser has no camera API
+// 'idle' = nothing started, 'requesting' = awaiting permission prompt,
+// 'denied' = user said no / no camera, 'starting' = booting reader,
+// 'scanning' = camera active, 'unsupported' = no camera API
 export default function BarcodeScannerModal({ show, onClose, onScan }) {
-    const containerRef = useRef(null);
-    const scannerRef = useRef(null);
+    const videoRef = useRef(null);
+    const readerRef = useRef(null);
+    const detectorIntervalRef = useRef(null);
+    const streamRef = useRef(null);
     const [phase, setPhase] = useState('idle');
     const [errorDetail, setErrorDetail] = useState(null);
 
+    const stopAll = () => {
+        if (readerRef.current) {
+            try { readerRef.current.reset(); } catch {}
+            readerRef.current = null;
+        }
+        if (detectorIntervalRef.current) {
+            clearInterval(detectorIntervalRef.current);
+            detectorIntervalRef.current = null;
+        }
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
+    };
+
+    const handleDecoded = (text) => {
+        if (!text) return;
+        stopAll();
+        onScan(text);
+        onClose();
+    };
+
     const startScanner = async () => {
         setErrorDetail(null);
+        stopAll();
 
         if (!navigator.mediaDevices?.getUserMedia) {
             setPhase('unsupported');
@@ -21,11 +46,15 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
 
         setPhase('requesting');
 
-        // Step 1: explicitly request camera permission (this is what triggers the browser prompt)
+        // Request camera (triggers permission prompt if needed)
         let stream;
         try {
             stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { ideal: 'environment' } },
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                },
             });
         } catch (err) {
             setPhase('denied');
@@ -34,61 +63,64 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
                 : err?.message || 'Could not access camera.');
             return;
         }
-        // Release the test stream — html5-qrcode will reopen its own
-        stream.getTracks().forEach(t => t.stop());
+        streamRef.current = stream;
+
+        // Attach the stream to <video>
+        if (!videoRef.current) {
+            stream.getTracks().forEach(t => t.stop());
+            return;
+        }
+        videoRef.current.srcObject = stream;
+        try { await videoRef.current.play(); } catch {}
 
         setPhase('starting');
 
+        // Path A: native BarcodeDetector (mobile Chrome, fast + accurate)
+        if ('BarcodeDetector' in window) {
+            try {
+                const formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'codabar', 'itf', 'qr_code', 'data_matrix'];
+                const supported = await window.BarcodeDetector.getSupportedFormats?.() || formats;
+                const detector = new window.BarcodeDetector({ formats: formats.filter(f => supported.includes(f)) });
+
+                setPhase('scanning');
+                detectorIntervalRef.current = setInterval(async () => {
+                    if (!videoRef.current || videoRef.current.readyState < 2) return;
+                    try {
+                        const codes = await detector.detect(videoRef.current);
+                        if (codes && codes.length > 0 && codes[0].rawValue) {
+                            handleDecoded(codes[0].rawValue);
+                        }
+                    } catch { /* per-frame errors are normal */ }
+                }, 150);
+                return;
+            } catch {
+                // fall through to ZXing
+            }
+        }
+
+        // Path B: @zxing/browser fallback (universal)
         try {
-            const mod = await import('html5-qrcode');
-            const { Html5Qrcode, Html5QrcodeSupportedFormats } = mod;
-            if (!containerRef.current) return;
+            const { BrowserMultiFormatReader } = await import('@zxing/browser');
+            const { DecodeHintType, BarcodeFormat } = await import('@zxing/library');
 
-            // Whitelist 1D + 2D formats. Without this, decoding sometimes silently
-            // skips common product barcodes (EAN/UPC/Code128).
-            const formats = [
-                Html5QrcodeSupportedFormats.EAN_13,
-                Html5QrcodeSupportedFormats.EAN_8,
-                Html5QrcodeSupportedFormats.UPC_A,
-                Html5QrcodeSupportedFormats.UPC_E,
-                Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION,
-                Html5QrcodeSupportedFormats.CODE_128,
-                Html5QrcodeSupportedFormats.CODE_39,
-                Html5QrcodeSupportedFormats.CODE_93,
-                Html5QrcodeSupportedFormats.CODABAR,
-                Html5QrcodeSupportedFormats.ITF,
-                Html5QrcodeSupportedFormats.QR_CODE,
-                Html5QrcodeSupportedFormats.DATA_MATRIX,
-            ];
+            const hints = new Map();
+            hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+                BarcodeFormat.EAN_13, BarcodeFormat.EAN_8,
+                BarcodeFormat.UPC_A, BarcodeFormat.UPC_E,
+                BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.CODE_93,
+                BarcodeFormat.CODABAR, BarcodeFormat.ITF,
+                BarcodeFormat.QR_CODE, BarcodeFormat.DATA_MATRIX,
+            ]);
+            hints.set(DecodeHintType.TRY_HARDER, true);
 
-            const scanner = new Html5Qrcode(containerRef.current.id, {
-                formatsToSupport: formats,
-                verbose: false,
+            const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 120 });
+            readerRef.current = reader;
+
+            await reader.decodeFromVideoElement(videoRef.current, (result, err, controls) => {
+                if (result) {
+                    handleDecoded(result.getText());
+                }
             });
-            scannerRef.current = scanner;
-
-            await scanner.start(
-                { facingMode: 'environment' },
-                {
-                    fps: 15,
-                    // Use a wide rectangle so 1D barcodes fit comfortably.
-                    // Function form scales with the visible camera area.
-                    qrbox: (w, h) => {
-                        const minEdge = Math.min(w, h);
-                        return { width: Math.floor(minEdge * 0.95), height: Math.floor(minEdge * 0.5) };
-                    },
-                    aspectRatio: 1.7777,
-                    disableFlip: false,
-                    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-                },
-                (decoded) => {
-                    if (!decoded) return;
-                    onScan(decoded);
-                    scanner.stop().then(() => scanner.clear()).catch(() => {});
-                    onClose();
-                },
-                () => { /* per-frame failures are normal — ignore */ }
-            );
             setPhase('scanning');
         } catch (err) {
             setPhase('denied');
@@ -97,15 +129,9 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
     };
 
     useEffect(() => {
-        if (show) {
-            startScanner();
-        }
+        if (show) startScanner();
         return () => {
-            const s = scannerRef.current;
-            if (s) {
-                s.stop().then(() => s.clear()).catch(() => {});
-                scannerRef.current = null;
-            }
+            stopAll();
             setPhase('idle');
             setErrorDetail(null);
         };
@@ -118,7 +144,7 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
                 {phase === 'requesting' && (
                     <div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-800 flex items-start gap-2">
                         <Camera className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                        <span>Waiting for camera permission… Allow access in the browser prompt to scan.</span>
+                        <span>Waiting for camera permission… Allow access in the browser prompt.</span>
                     </div>
                 )}
 
@@ -144,19 +170,33 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
 
                 {phase === 'unsupported' && (
                     <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                        Your browser doesn't expose a camera API (or you're on http instead of https). Use a USB scanner or open the page in Chrome/Safari over HTTPS.
+                        Your browser doesn't expose a camera API (or you're on http instead of https). Use a USB scanner or open the page over HTTPS.
                     </div>
                 )}
 
                 {phase === 'scanning' && (
-                    <p className="text-xs text-gray-500">Point the camera at a barcode. The scanner closes automatically on a successful read.</p>
+                    <p className="text-xs text-gray-500">
+                        Hold the barcode 10-20cm from the camera, fill the frame, good light. The scanner closes automatically on a successful read.
+                    </p>
                 )}
 
-                <div
-                    ref={containerRef}
-                    id="barcode-scanner-region"
-                    className={`w-full h-[260px] bg-black rounded-lg overflow-hidden ${phase !== 'scanning' ? 'opacity-30' : ''}`}
-                />
+                {phase === 'starting' && (
+                    <p className="text-xs text-gray-500">Starting camera…</p>
+                )}
+
+                <div className="relative w-full bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '16/10' }}>
+                    <video
+                        ref={videoRef}
+                        playsInline
+                        muted
+                        className="w-full h-full object-cover"
+                    />
+                    {phase === 'scanning' && (
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                            <div className="border-2 border-emerald-400/80 rounded-lg" style={{ width: '85%', height: '40%' }} />
+                        </div>
+                    )}
+                </div>
 
                 <div className="flex justify-end">
                     <button onClick={onClose} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">

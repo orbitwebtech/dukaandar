@@ -1,1 +1,0 @@
-import{t as e}from"./jsx-runtime-QSs-8f8Y.js";var t=e();function n({children:e,required:n,className:r=``,...i}){return(0,t.jsxs)(`label`,{className:`block text-sm font-medium text-gray-700 mb-1 ${r}`,...i,children:[e,n&&(0,t.jsx)(`span`,{className:`text-danger-500 ml-0.5`,children:`*`})]})}export{n as t};
