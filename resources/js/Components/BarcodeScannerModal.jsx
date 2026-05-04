@@ -139,8 +139,34 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
     };
 
     useEffect(() => {
-        if (show) startScanner();
+        if (!show) return;
+
+        // The Modal's Transition mounts children AFTER this effect first fires,
+        // so videoRef.current may not be ready yet on a re-open. Poll until it is.
+        let cancelled = false;
+        let rafId = null;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 60; // ≈1 second at 60fps
+
+        const tryStart = () => {
+            if (cancelled) return;
+            if (videoRef.current) {
+                startScanner();
+                return;
+            }
+            attempts++;
+            if (attempts >= MAX_ATTEMPTS) {
+                setPhase('denied');
+                setErrorDetail('Camera UI failed to mount in time. Try closing and reopening.');
+                return;
+            }
+            rafId = requestAnimationFrame(tryStart);
+        };
+        rafId = requestAnimationFrame(tryStart);
+
         return () => {
+            cancelled = true;
+            if (rafId) cancelAnimationFrame(rafId);
             stopAll();
             setPhase('idle');
             setErrorDetail(null);
