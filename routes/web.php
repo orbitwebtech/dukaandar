@@ -106,6 +106,8 @@ Route::prefix('store/{store}')->middleware(['auth', 'verified', 'system_role:mem
         ->middleware('store.can:products.create')->name('products.import.run');
     Route::get('/products/sample-csv', [ProductController::class, 'sampleCsv'])
         ->middleware('store.can:products.create')->name('products.sample-csv');
+    Route::get('/products/lookup', [ProductController::class, 'lookup'])
+        ->middleware('store.can:orders.create')->name('products.lookup');
     Route::get('/products/create', [ProductController::class, 'create'])
         ->middleware('store.can:products.create')->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])

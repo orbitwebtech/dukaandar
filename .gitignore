@@ -31,3 +31,6 @@ npm-debug.log*
 yarn-error.log*
 bootstrap/cache/*
 !bootstrap/cache/.gitignore
+
+# Local archives (don't commit these — they should never be in the repo)
+*.zip

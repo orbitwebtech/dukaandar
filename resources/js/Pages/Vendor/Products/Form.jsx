@@ -84,13 +84,21 @@ function VariantRow({ variant, index, onChange, onRemove }) {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                 <div>
                     <Label>SKU</Label>
                     <TextInput
                         value={variant.sku || ''}
                         onChange={(e) => updateField('sku', e.target.value)}
                         placeholder="VAR-001"
+                    />
+                </div>
+                <div>
+                    <Label>Barcode</Label>
+                    <TextInput
+                        value={variant.barcode || ''}
+                        onChange={(e) => updateField('barcode', e.target.value)}
+                        placeholder="EAN/UPC"
                     />
                 </div>
                 <div>
@@ -139,6 +147,7 @@ export default function Form({ product, categories = [] }) {
     const initialVariants = product?.variants?.map((v) => ({
         id: v.id,
         sku: v.sku || '',
+        barcode: v.barcode || '',
         price: v.price || '',
         stock_qty: v.stock_qty ?? '',
         is_default: !!v.is_default,
@@ -150,6 +159,7 @@ export default function Form({ product, categories = [] }) {
     const { data, setData, post, put, processing, errors } = useForm({
         name: product?.name || '',
         sku: product?.sku || '',
+        barcode: product?.barcode || '',
         type: product?.type || 'simple',
         category_id: product?.category_id || '',
         description: product?.description || '',
@@ -195,7 +205,7 @@ export default function Form({ product, categories = [] }) {
     function addVariant() {
         setData('variants', [
             ...data.variants,
-            { sku: '', price: '', stock_qty: '', is_default: false, attributes: [{ key: '', value: '' }] },
+            { sku: '', barcode: '', price: '', stock_qty: '', is_default: false, attributes: [{ key: '', value: '' }] },
         ]);
     }
 
@@ -247,6 +257,18 @@ export default function Form({ product, categories = [] }) {
                                 placeholder="e.g. TSHIRT-001"
                                 error={errors.sku}
                             />
+                            <p className="mt-1 text-xs text-gray-400">Auto-generated if left blank.</p>
+                        </div>
+
+                        <div>
+                            <Label>Barcode</Label>
+                            <TextInput
+                                value={data.barcode}
+                                onChange={(e) => setData('barcode', e.target.value)}
+                                placeholder="EAN / UPC / Code128"
+                                error={errors.barcode}
+                            />
+                            <p className="mt-1 text-xs text-gray-400">For order-form scanner. SKU is also accepted.</p>
                         </div>
 
                         <div>

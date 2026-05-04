@@ -1,5 +1,5 @@
 import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import VendorLayout from '@/Layouts/VendorLayout';
 import { useStorePath } from '@/lib/storePath';
 import Card, { CardHeader } from '@/Components/Card';
@@ -7,7 +7,8 @@ import SearchableSelect from '@/Components/SearchableSelect';
 import TextInput from '@/Components/TextInput';
 import Label from '@/Components/Label';
 import Button from '@/Components/Button';
-import { Plus, Trash2, UserPlus, ShoppingCart, X } from 'lucide-react';
+import { Plus, Trash2, UserPlus, ShoppingCart, X, Camera } from 'lucide-react';
+import BarcodeScannerModal from '@/Components/BarcodeScannerModal';
 
 const formatCurrency = (amount) =>
     '₹' + Number(amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
@@ -77,6 +78,11 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
     const [showNewCustomer, setShowNewCustomer] = useState(false);
     const [customerSearch, setCustomerSearch] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [scanInput, setScanInput] = useState('');
+    const [scanFeedback, setScanFeedback] = useState(null);
+    const [scanLooking, setScanLooking] = useState(false);
+    const [scannerOpen, setScannerOpen] = useState(false);
+    const scanInputRef = useRef(null);
     const [couponState, setCouponState] = useState({ status: 'idle', message: '' });
     const [couponChecking, setCouponChecking] = useState(false);
     const pageErrors = usePage().props.errors || {};
@@ -133,6 +139,68 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
 
     const addItem = () => {
         setData('items', [...data.items, emptyItem()]);
+    };
+
+    // ---- Barcode scan: look up product/variant and add to items (or bump qty) ----
+    const handleScannedCode = async (raw) => {
+        const code = String(raw || '').trim();
+        if (!code) return;
+        setScanLooking(true);
+        setScanFeedback(null);
+        try {
+            const res = await fetch(url(`/products/lookup?code=${encodeURIComponent(code)}`), {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const json = await res.json();
+            if (!json.found) {
+                setScanFeedback({ type: 'error', text: json.message || 'No match' });
+                return;
+            }
+            // Already in cart? bump qty
+            setData('items', (() => {
+                const existing = data.items.find(it =>
+                    it.product_id === json.product_id &&
+                    (it.variant_id ?? null) === (json.variant_id ?? null)
+                );
+                if (existing) {
+                    return data.items.map(it =>
+                        it._key === existing._key ? { ...it, qty: (parseInt(it.qty) || 0) + 1 } : it
+                    );
+                }
+                // Replace last empty row OR append new
+                const lastEmptyIdx = [...data.items].findIndex(it => !it.product_id);
+                const newRow = {
+                    ...emptyItem(),
+                    product_id: json.product_id,
+                    variant_id: json.variant_id,
+                    qty: 1,
+                    unit_price: json.price,
+                };
+                if (lastEmptyIdx >= 0) {
+                    const next = [...data.items];
+                    next[lastEmptyIdx] = { ...next[lastEmptyIdx], ...newRow, _key: next[lastEmptyIdx]._key };
+                    return next;
+                }
+                return [...data.items, newRow];
+            })());
+            const label = json.variant_label ? `${json.product_name} (${json.variant_label})` : json.product_name;
+            setScanFeedback({ type: 'success', text: `Added: ${label} @ ₹${json.price}` });
+        } catch (err) {
+            setScanFeedback({ type: 'error', text: 'Lookup failed: ' + (err?.message || 'unknown') });
+        } finally {
+            setScanLooking(false);
+            setScanInput('');
+            setTimeout(() => scanInputRef.current?.focus(), 50);
+            setTimeout(() => setScanFeedback(null), 4000);
+        }
+    };
+
+    const onScanKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleScannedCode(scanInput);
+        }
     };
 
     const removeItem = (key) => {
@@ -377,6 +445,38 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                         title="Step 2 · Products"
                         subtitle="Add products to this order"
                     />
+
+                    {/* Barcode scan bar */}
+                    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50/40 p-3">
+                        <div className="flex items-center gap-2">
+                            <input
+                                ref={scanInputRef}
+                                type="text"
+                                value={scanInput}
+                                onChange={(e) => setScanInput(e.target.value)}
+                                onKeyDown={onScanKeyDown}
+                                placeholder="Scan or type barcode / SKU and press Enter"
+                                autoFocus
+                                className="flex-1 rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setScannerOpen(true)}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition"
+                                title="Open camera scanner (mobile/tablet)"
+                            >
+                                <Camera className="h-4 w-4" /> Camera
+                            </button>
+                        </div>
+                        {scanLooking && <p className="mt-2 text-xs text-gray-500">Looking up…</p>}
+                        {scanFeedback?.type === 'success' && (
+                            <p className="mt-2 text-xs font-medium text-emerald-700">✓ {scanFeedback.text}</p>
+                        )}
+                        {scanFeedback?.type === 'error' && (
+                            <p className="mt-2 text-xs font-medium text-red-600">✗ {scanFeedback.text}</p>
+                        )}
+                        <p className="mt-1.5 text-[11px] text-gray-500">USB scanner: just scan — it'll type the code and submit automatically. Tablet: tap Camera.</p>
+                    </div>
 
                     <div className="space-y-4">
                         {data.items.map((item, idx) => {
@@ -717,6 +817,12 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                     </Button>
                 </div>
             </form>
+
+            <BarcodeScannerModal
+                show={scannerOpen}
+                onClose={() => setScannerOpen(false)}
+                onScan={handleScannedCode}
+            />
         </VendorLayout>
     );
 }

@@ -52,6 +52,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'nullable|string|max:100',
+            'barcode' => 'nullable|string|max:100',
             'type' => 'required|in:simple,variable',
             'category_id' => 'nullable|exists:categories,id',
             'description' => 'nullable|string',
@@ -65,6 +66,7 @@ class ProductController extends Controller
             'variants.*.price' => 'required_with:variants|numeric|min:0',
             'variants.*.stock_qty' => 'required_with:variants|integer|min:0',
             'variants.*.sku' => 'nullable|string',
+            'variants.*.barcode' => 'nullable|string|max:100',
             'variants.*.low_stock_threshold' => 'nullable|integer|min:0',
             'variants.*.is_default' => 'nullable|boolean',
         ]);
@@ -79,6 +81,7 @@ class ProductController extends Controller
         $product = $store->products()->create([
             'name' => $validated['name'],
             'sku' => $validated['sku'],
+            'barcode' => $validated['barcode'] ?: null,
             'type' => $validated['type'],
             'category_id' => $validated['category_id'],
             'description' => $validated['description'] ?? null,
@@ -96,6 +99,7 @@ class ProductController extends Controller
                     'product_id' => $product->id,
                     'store_id' => $store->id,
                     'sku' => $v['sku'] ?? null,
+                    'barcode' => $v['barcode'] ?? null,
                     'attributes' => $this->normalizeAttributes($v['attributes']),
                     'price' => $v['price'],
                     'stock_qty' => $v['stock_qty'],
@@ -129,6 +133,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'nullable|string|max:100',
+            'barcode' => 'nullable|string|max:100',
             'type' => 'required|in:simple,variable',
             'category_id' => 'nullable|exists:categories,id',
             'description' => 'nullable|string',
@@ -143,6 +148,7 @@ class ProductController extends Controller
             'variants.*.price' => 'required_with:variants|numeric|min:0',
             'variants.*.stock_qty' => 'required_with:variants|integer|min:0',
             'variants.*.sku' => 'nullable|string',
+            'variants.*.barcode' => 'nullable|string|max:100',
             'variants.*.low_stock_threshold' => 'nullable|integer|min:0',
             'variants.*.is_default' => 'nullable|boolean',
         ]);
@@ -157,6 +163,7 @@ class ProductController extends Controller
         $product->update([
             'name' => $validated['name'],
             'sku' => $validated['sku'] ?: $product->sku,
+            'barcode' => $validated['barcode'] ?: null,
             'type' => $validated['type'],
             'category_id' => $validated['category_id'],
             'description' => $validated['description'] ?? null,
@@ -180,6 +187,7 @@ class ProductController extends Controller
                     if ($existing) {
                         $existing->update([
                             'sku' => $v['sku'] ?? null,
+                            'barcode' => $v['barcode'] ?? null,
                             'attributes' => $this->normalizeAttributes($v['attributes']),
                             'price' => $v['price'],
                             'stock_qty' => $v['stock_qty'],
@@ -193,6 +201,7 @@ class ProductController extends Controller
                         'product_id' => $product->id,
                         'store_id' => $store->id,
                         'sku' => $v['sku'] ?? null,
+                        'barcode' => $v['barcode'] ?? null,
                         'attributes' => $this->normalizeAttributes($v['attributes']),
                         'price' => $v['price'],
                         'stock_qty' => $v['stock_qty'],
@@ -251,22 +260,77 @@ class ProductController extends Controller
         return Inertia::render('Vendor/Products/Import');
     }
 
+    public function lookup(Request $request, Store $store)
+    {
+        $code = trim((string) $request->query('code', ''));
+        if ($code === '') {
+            return response()->json(['found' => false, 'message' => 'Empty code']);
+        }
+
+        // 1. Try variant by sku/barcode first (gives us a precise pick)
+        $variant = ProductVariant::where('store_id', $store->id)
+            ->where(function ($q) use ($code) {
+                $q->where('sku', $code)->orWhere('barcode', $code);
+            })
+            ->with('product:id,name,type,status,selling_price')
+            ->first();
+
+        if ($variant && $variant->product && $variant->product->status === 'active') {
+            return response()->json([
+                'found' => true,
+                'product_id' => $variant->product_id,
+                'product_name' => $variant->product->name,
+                'variant_id' => $variant->id,
+                'variant_label' => $variant->getAttributeLabel(),
+                'price' => (float) $variant->price,
+                'stock' => (int) $variant->stock_qty,
+            ]);
+        }
+
+        // 2. Try product by sku/barcode
+        $product = $store->products()
+            ->where(function ($q) use ($code) {
+                $q->where('sku', $code)->orWhere('barcode', $code);
+            })
+            ->where('status', 'active')
+            ->first();
+
+        if (!$product) {
+            return response()->json(['found' => false, 'message' => "No active product with code {$code}"]);
+        }
+
+        if ($product->type === 'variable') {
+            return response()->json([
+                'found' => false,
+                'message' => "{$product->name} is a variable product. Scan a specific variant's barcode instead.",
+            ]);
+        }
+
+        return response()->json([
+            'found' => true,
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'variant_id' => null,
+            'variant_label' => null,
+            'price' => (float) $product->selling_price,
+            'stock' => (int) $product->stock_qty,
+        ]);
+    }
+
     public function sampleCsv(Store $store): StreamedResponse
     {
         $headers = [
-            'type', 'name', 'sku', 'category', 'description',
+            'type', 'name', 'sku', 'barcode', 'category', 'description',
             'cost_price', 'selling_price', 'stock_qty', 'low_stock_threshold', 'status',
-            'variant_attributes', 'variant_sku', 'variant_price', 'variant_stock', 'variant_low_stock_threshold',
+            'variant_attributes', 'variant_sku', 'variant_barcode', 'variant_price', 'variant_stock', 'variant_low_stock_threshold',
         ];
 
         $rows = [
-            // Simple products — variant columns left blank
-            ['simple', 'Cotton Kurta White', 'KURTA-001', 'Kurta', 'Soft cotton kurta', '350', '599', '45', '10', 'active', '', '', '', '', ''],
-            ['simple', 'Silk Dupatta Red', 'DUP-002', 'Dupatta', '', '200', '399', '30', '5', 'active', '', '', '', '', ''],
-            // Variable product — three rows share name/sku/category, each defines a variant
-            ['variable', 'Designer Lehenga', 'LEH-001', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Red|Size:M', 'LEH-001-R-M', '2499', '5', '2'],
-            ['variable', 'Designer Lehenga', 'LEH-001', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Red|Size:L', 'LEH-001-R-L', '2699', '3', '2'],
-            ['variable', 'Designer Lehenga', 'LEH-001', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Blue|Size:M', 'LEH-001-B-M', '2499', '4', '2'],
+            ['simple', 'Cotton Kurta White', 'KURTA-001', '8901234567890', 'Kurta', 'Soft cotton kurta', '350', '599', '45', '10', 'active', '', '', '', '', '', ''],
+            ['simple', 'Silk Dupatta Red', 'DUP-002', '', 'Dupatta', '', '200', '399', '30', '5', 'active', '', '', '', '', '', ''],
+            ['variable', 'Designer Lehenga', 'LEH-001', '', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Red|Size:M', 'LEH-001-R-M', '8901111000010', '2499', '5', '2'],
+            ['variable', 'Designer Lehenga', 'LEH-001', '', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Red|Size:L', 'LEH-001-R-L', '8901111000011', '2699', '3', '2'],
+            ['variable', 'Designer Lehenga', 'LEH-001', '', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Blue|Size:M', 'LEH-001-B-M', '8901111000012', '2499', '4', '2'],
         ];
 
         return response()->streamDownload(function () use ($headers, $rows) {
@@ -376,6 +440,7 @@ class ProductController extends Controller
                     $product = $store->products()->create([
                         'name' => $first['name'],
                         'sku' => $sku,
+                        'barcode' => !empty($first['barcode']) ? $first['barcode'] : null,
                         'type' => 'simple',
                         'category_id' => $categoryId,
                         'description' => $first['description'] ?: null,
@@ -394,6 +459,7 @@ class ProductController extends Controller
                 $product = $store->products()->create([
                     'name' => $first['name'],
                     'sku' => $sku,
+                    'barcode' => !empty($first['barcode']) ? $first['barcode'] : null,
                     'type' => 'variable',
                     'category_id' => $categoryId,
                     'description' => $first['description'] ?: null,
@@ -418,6 +484,7 @@ class ProductController extends Controller
                         'product_id' => $product->id,
                         'store_id' => $store->id,
                         'sku' => $r['variant_sku'] ?: ($sku . '-' . ($i + 1)),
+                        'barcode' => !empty($r['variant_barcode']) ? $r['variant_barcode'] : null,
                         'attributes' => $attrs,
                         'price' => (float) $r['variant_price'],
                         'stock_qty' => $vStock,
