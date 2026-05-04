@@ -320,7 +320,7 @@
     ]
   },
   "node_modules/html5-qrcode/esm/index.js": {
-    "file": "assets/esm-BdL3AOj1.js",
+    "file": "assets/esm-Bcfgl_-r.js",
     "name": "esm",
     "src": "node_modules/html5-qrcode/esm/index.js",
     "isDynamicEntry": true,
@@ -329,7 +329,7 @@
     ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-DEzFxXZX.css",
+    "file": "assets/app-CXEZmRxP.css",
     "name": "app",
     "names": [
       "app.css"
@@ -642,7 +642,7 @@
     ]
   },
   "resources/js/Pages/Vendor/Orders/Form.jsx": {
-    "file": "assets/Form-wuVIK_1W.js",
+    "file": "assets/Form-CXl3S9uB.js",
     "name": "Form",
     "src": "resources/js/Pages/Vendor/Orders/Form.jsx",
     "isDynamicEntry": true,
@@ -834,7 +834,7 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-B1W7U9ZK.js",
+    "file": "assets/app-D1HFnxQ8.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
@@ -874,7 +874,7 @@
       "resources/js/Pages/Vendor/Settings/Index.jsx"
     ],
     "css": [
-      "assets/app-DEzFxXZX.css"
+      "assets/app-CXEZmRxP.css"
     ]
   }
 }

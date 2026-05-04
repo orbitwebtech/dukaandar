@@ -40,14 +40,47 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
         setPhase('starting');
 
         try {
-            const { Html5Qrcode } = await import('html5-qrcode');
+            const mod = await import('html5-qrcode');
+            const { Html5Qrcode, Html5QrcodeSupportedFormats } = mod;
             if (!containerRef.current) return;
-            const scanner = new Html5Qrcode(containerRef.current.id);
+
+            // Whitelist 1D + 2D formats. Without this, decoding sometimes silently
+            // skips common product barcodes (EAN/UPC/Code128).
+            const formats = [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.CODE_93,
+                Html5QrcodeSupportedFormats.CODABAR,
+                Html5QrcodeSupportedFormats.ITF,
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.DATA_MATRIX,
+            ];
+
+            const scanner = new Html5Qrcode(containerRef.current.id, {
+                formatsToSupport: formats,
+                verbose: false,
+            });
             scannerRef.current = scanner;
 
             await scanner.start(
                 { facingMode: 'environment' },
-                { fps: 10, qrbox: { width: 280, height: 140 } },
+                {
+                    fps: 15,
+                    // Use a wide rectangle so 1D barcodes fit comfortably.
+                    // Function form scales with the visible camera area.
+                    qrbox: (w, h) => {
+                        const minEdge = Math.min(w, h);
+                        return { width: Math.floor(minEdge * 0.95), height: Math.floor(minEdge * 0.5) };
+                    },
+                    aspectRatio: 1.7777,
+                    disableFlip: false,
+                    experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+                },
                 (decoded) => {
                     if (!decoded) return;
                     onScan(decoded);
