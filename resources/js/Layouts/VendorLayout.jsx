@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     LayoutDashboard, Users, Package, ShoppingCart,
     BarChart3, TrendingUp, Tag, Settings,
-    Menu, X, LogOut, ChevronDown, Store, Building2, UserCog
+    Menu, X, LogOut, ChevronDown, Store, Building2, UserCog, Wallet
 } from 'lucide-react';
 import { useStorePath, useCan } from '@/lib/storePath';
 
@@ -30,6 +30,7 @@ export default function VendorLayout({ children, title }) {
     const orgNav = [
         { name: 'Stores', href: '/org/stores', icon: Building2, show: !!auth?.user?.is_owner },
         { name: 'Team', href: '/org/team', icon: UserCog, show: !!auth?.user?.is_owner || can('team.invite') },
+        { name: 'Expenses', href: '/org/expenses', icon: Wallet, show: !!auth?.user?.is_owner },
     ].filter(i => i.show);
 
     return (

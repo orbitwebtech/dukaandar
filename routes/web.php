@@ -13,6 +13,7 @@ use App\Http\Controllers\Vendor\OrderController;
 use App\Http\Controllers\Vendor\CouponController;
 use App\Http\Controllers\Vendor\SettingController;
 use App\Http\Controllers\Vendor\ReportController;
+use App\Http\Controllers\Org\ExpenseController as OrgExpenseController;
 use App\Http\Controllers\Org\StoreController as OrgStoreController;
 use App\Http\Controllers\Org\TeamController;
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -70,6 +71,14 @@ Route::middleware(['auth', 'verified', 'system_role:member'])->group(function ()
         Route::put('/team/members/{member}', [TeamController::class, 'updateMember'])->name('team.update');
         Route::delete('/team/members/{member}', [TeamController::class, 'removeMember'])->name('team.remove');
         Route::delete('/team/invitations/{invitation}', [TeamController::class, 'revokeInvitation'])->name('team.invitation.revoke');
+
+        // Expenses
+        Route::get('/expenses', [OrgExpenseController::class, 'index'])->name('expenses.index');
+        Route::get('/expenses/create', [OrgExpenseController::class, 'create'])->name('expenses.create');
+        Route::post('/expenses', [OrgExpenseController::class, 'store'])->name('expenses.store');
+        Route::get('/expenses/{expense}/edit', [OrgExpenseController::class, 'edit'])->name('expenses.edit');
+        Route::put('/expenses/{expense}', [OrgExpenseController::class, 'update'])->name('expenses.update');
+        Route::delete('/expenses/{expense}', [OrgExpenseController::class, 'destroy'])->name('expenses.destroy');
     });
 });
 
