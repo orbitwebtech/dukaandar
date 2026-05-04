@@ -152,46 +152,61 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                 credentials: 'same-origin',
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
             });
+            if (!res.ok) {
+                setScanFeedback({ type: 'error', text: `Lookup HTTP ${res.status}` });
+                return;
+            }
             const json = await res.json();
             if (!json.found) {
                 setScanFeedback({ type: 'error', text: json.message || 'No match' });
                 return;
             }
-            // Already in cart? bump qty
-            setData('items', (() => {
-                const existing = data.items.find(it =>
+
+            // Use the FUNCTIONAL form so we always update the latest state, not a stale closure
+            // captured when the modal opened.
+            setData((prev) => {
+                const items = Array.isArray(prev.items) ? prev.items : [];
+                const existing = items.find(it =>
                     it.product_id === json.product_id &&
                     (it.variant_id ?? null) === (json.variant_id ?? null)
                 );
                 if (existing) {
-                    return data.items.map(it =>
-                        it._key === existing._key ? { ...it, qty: (parseInt(it.qty) || 0) + 1 } : it
-                    );
+                    return {
+                        ...prev,
+                        items: items.map(it =>
+                            it._key === existing._key
+                                ? { ...it, qty: (parseInt(it.qty) || 0) + 1 }
+                                : it
+                        ),
+                    };
                 }
-                // Replace last empty row OR append new
-                const lastEmptyIdx = [...data.items].findIndex(it => !it.product_id);
+                const lastEmptyIdx = items.findIndex(it => !it.product_id);
                 const newRow = {
                     ...emptyItem(),
                     product_id: json.product_id,
-                    variant_id: json.variant_id,
+                    variant_id: json.variant_id ?? null,
                     qty: 1,
-                    unit_price: json.price,
+                    unit_price: json.price ?? 0,
                 };
+                let nextItems;
                 if (lastEmptyIdx >= 0) {
-                    const next = [...data.items];
-                    next[lastEmptyIdx] = { ...next[lastEmptyIdx], ...newRow, _key: next[lastEmptyIdx]._key };
-                    return next;
+                    nextItems = [...items];
+                    nextItems[lastEmptyIdx] = { ...nextItems[lastEmptyIdx], ...newRow, _key: nextItems[lastEmptyIdx]._key };
+                } else {
+                    nextItems = [...items, newRow];
                 }
-                return [...data.items, newRow];
-            })());
+                return { ...prev, items: nextItems };
+            });
+
             const label = json.variant_label ? `${json.product_name} (${json.variant_label})` : json.product_name;
             setScanFeedback({ type: 'success', text: `Added: ${label} @ ₹${json.price}` });
         } catch (err) {
+            console.error('Scan handler error:', err);
             setScanFeedback({ type: 'error', text: 'Lookup failed: ' + (err?.message || 'unknown') });
         } finally {
             setScanLooking(false);
             setScanInput('');
-            setTimeout(() => scanInputRef.current?.focus(), 50);
+            setTimeout(() => { try { scanInputRef.current?.focus(); } catch {} }, 50);
             setTimeout(() => setScanFeedback(null), 4000);
         }
     };
