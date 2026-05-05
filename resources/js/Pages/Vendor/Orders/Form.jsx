@@ -567,7 +567,13 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                                 <SearchableSelect
                                     options={customerOptions}
                                     value={customerOptions.find((o) => o.value === data.customer_id) || null}
-                                    onChange={(opt) => setData('customer_id', opt?.value || null)}
+                                    onChange={(opt) => {
+                                        setData('customer_id', opt?.value || null);
+                                        if (opt?.value) {
+                                            // Jump straight to the scan input so vendor can start scanning immediately
+                                            setTimeout(() => { try { scanInputRef.current?.focus(); } catch {} }, 50);
+                                        }
+                                    }}
                                     placeholder="Search by name or WhatsApp number..."
                                     error={allErrors.customer_id}
                                     filterOption={filterCustomers}
