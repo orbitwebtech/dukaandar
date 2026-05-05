@@ -376,8 +376,7 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                 return { ...prev, items: nextItems };
             });
 
-            const label = json.variant_label ? `${json.product_name} (${json.variant_label})` : json.product_name;
-            setScanFeedback({ type: 'success', text: `Added: ${label} @ ₹${json.price}` });
+            setScanFeedback({ type: 'success', text: 'Product added successfully' });
         } catch (err) {
             console.error('Scan handler error:', err);
             setScanFeedback({ type: 'error', text: 'Lookup failed: ' + (err?.message || 'unknown') });
