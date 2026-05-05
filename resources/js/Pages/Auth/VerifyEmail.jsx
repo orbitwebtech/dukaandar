@@ -4,6 +4,7 @@ import Button from '@/Components/Button';
 import TextInput from '@/Components/TextInput';
 import Label from '@/Components/Label';
 import { Mail } from 'lucide-react';
+import { enterSubmits } from '@/lib/formEnter';
 
 export default function VerifyEmail({ email }) {
     const { flash } = usePage().props;
@@ -39,7 +40,7 @@ export default function VerifyEmail({ email }) {
                     </div>
                 )}
 
-                <form onSubmit={submit} className="space-y-3 text-left">
+                <form onSubmit={submit} onKeyDown={enterSubmits(submit)} className="space-y-3 text-left">
                     <div>
                         <Label>Resend to a different email</Label>
                         <TextInput

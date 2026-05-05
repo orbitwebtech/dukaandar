@@ -3,6 +3,7 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import TextInput from '@/Components/TextInput';
 import Label from '@/Components/Label';
 import Button from '@/Components/Button';
+import { enterSubmits } from '@/lib/formEnter';
 
 export default function AcceptInvitation({ invitation }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -29,7 +30,7 @@ export default function AcceptInvitation({ invitation }) {
                     {invitation.email} · Stores: {invitation.stores.join(', ')}
                 </p>
 
-                <form onSubmit={submit} className="space-y-4">
+                <form onSubmit={submit} onKeyDown={enterSubmits(submit)} className="space-y-4">
                     <div>
                         <Label required>Your Name</Label>
                         <TextInput

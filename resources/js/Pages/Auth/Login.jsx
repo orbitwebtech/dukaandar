@@ -3,6 +3,7 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import TextInput from '@/Components/TextInput';
 import Label from '@/Components/Label';
 import Button from '@/Components/Button';
+import { enterSubmits } from '@/lib/formEnter';
 
 export default function Login() {
     const { data, setData, post, processing, errors } = useForm({
@@ -23,7 +24,7 @@ export default function Login() {
                 <h2 className="text-2xl font-bold text-gray-900 text-center mb-1">Welcome Back</h2>
                 <p className="text-sm text-gray-500 text-center mb-8">Sign in to your Dukaandar account</p>
 
-                <form onSubmit={submit} className="space-y-5">
+                <form onSubmit={submit} onKeyDown={enterSubmits(submit)} className="space-y-5">
                     <div>
                         <Label required>Email</Label>
                         <TextInput
