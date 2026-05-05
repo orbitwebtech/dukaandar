@@ -84,7 +84,7 @@ function VariantRow({ variant, index, onChange, onRemove }) {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
                 <div>
                     <Label>SKU</Label>
                     <TextInput
@@ -99,6 +99,17 @@ function VariantRow({ variant, index, onChange, onRemove }) {
                         value={variant.barcode || ''}
                         onChange={(e) => updateField('barcode', e.target.value)}
                         placeholder="EAN/UPC"
+                    />
+                </div>
+                <div>
+                    <Label>Cost (₹)</Label>
+                    <TextInput
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={variant.cost_price || ''}
+                        onChange={(e) => updateField('cost_price', e.target.value)}
+                        placeholder="0.00"
                     />
                 </div>
                 <div>
@@ -149,6 +160,7 @@ export default function Form({ product, categories = [] }) {
         sku: v.sku || '',
         barcode: v.barcode || '',
         price: v.price || '',
+        cost_price: v.cost_price || '',
         stock_qty: v.stock_qty ?? '',
         is_default: !!v.is_default,
         attributes: Array.isArray(v.attributes)
@@ -205,7 +217,7 @@ export default function Form({ product, categories = [] }) {
     function addVariant() {
         setData('variants', [
             ...data.variants,
-            { sku: '', barcode: '', price: '', stock_qty: '', is_default: false, attributes: [{ key: '', value: '' }] },
+            { sku: '', barcode: '', price: '', cost_price: '', stock_qty: '', is_default: false, attributes: [{ key: '', value: '' }] },
         ]);
     }
 

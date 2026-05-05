@@ -9,7 +9,7 @@ class ProductVariant extends Model
 {
     protected $fillable = [
         'product_id', 'store_id', 'sku', 'barcode', 'attributes',
-        'price', 'stock_qty', 'low_stock_threshold', 'is_default',
+        'price', 'cost_price', 'stock_qty', 'low_stock_threshold', 'is_default',
     ];
 
     public function store(): BelongsTo
@@ -20,6 +20,7 @@ class ProductVariant extends Model
     protected $casts = [
         'attributes' => 'array',
         'price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'is_default' => 'boolean',
     ];
 

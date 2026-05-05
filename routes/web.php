@@ -193,6 +193,8 @@ Route::prefix('store/{store}')->middleware(['auth', 'verified', 'system_role:mem
         ->middleware('store.can:reports.read')->name('reports.inventory');
     Route::get('/reports/sales', [ReportController::class, 'sales'])
         ->middleware('store.can:reports.read')->name('reports.sales');
+    Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss'])
+        ->middleware('store.can:reports.read')->name('reports.profit-loss');
     Route::get('/reports/export/{type}', [ReportController::class, 'export'])
         ->middleware('store.can:reports.read')->name('reports.export');
 

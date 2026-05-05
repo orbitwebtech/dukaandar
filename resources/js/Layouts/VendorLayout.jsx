@@ -24,6 +24,7 @@ export default function VendorLayout({ children, title }) {
         { name: 'Purchases', href: url('/purchases'), icon: ShoppingBag, show: can('purchases.read') },
         { name: 'Inventory Reports', href: url('/reports/inventory'), icon: BarChart3, show: can('reports.read') },
         { name: 'Sales Reports', href: url('/reports/sales'), icon: TrendingUp, show: can('reports.read') },
+        { name: 'Profit & Loss', href: url('/reports/profit-loss'), icon: Wallet, show: can('reports.read') },
         { name: 'Coupons', href: url('/coupons'), icon: Tag, show: can('coupons.read') },
         { name: 'Settings', href: url('/settings'), icon: Settings, show: can('settings.read') },
     ].filter(i => i.show);
