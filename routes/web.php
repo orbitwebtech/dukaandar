@@ -48,6 +48,11 @@ Route::post('/email/verify/resend', [EmailVerificationController::class, 'resend
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
+Route::middleware('auth')->group(function () {
+    Route::get('/account/password', [AuthController::class, 'showChangePassword'])->name('password.edit');
+    Route::post('/account/password', [AuthController::class, 'updatePassword'])->name('password.update');
+});
+
 // Public signed invoice URL — for sharing with customers via WhatsApp/SMS
 Route::get('/i/{order}', [PublicInvoiceController::class, 'show'])
     ->middleware('signed')

@@ -12,6 +12,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -136,6 +137,29 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/login');
+    }
+
+    public function showChangePassword()
+    {
+        return Inertia::render('Auth/ChangePassword');
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => ['required'],
+            'password' => ['required', 'confirmed', Password::min(8)],
+        ]);
+
+        if (!Hash::check($validated['current_password'], $request->user()->password)) {
+            return back()->withErrors(['current_password' => 'Current password is incorrect.']);
+        }
+
+        $request->user()->forceFill([
+            'password' => $validated['password'],
+        ])->save();
+
+        return back()->with('success', 'Password updated.');
     }
 
     protected function redirectAfterLogin(User $user)

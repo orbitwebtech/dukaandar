@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
     LayoutDashboard, Building2, CreditCard, BarChart3,
-    Menu, X, LogOut, ChevronDown, Shield, Settings
+    Menu, X, LogOut, ChevronDown, Shield, Settings, KeyRound
 } from 'lucide-react';
 
 const navigation = [
@@ -56,6 +56,10 @@ export default function AdminLayout({ children, title }) {
                                 <>
                                     <div className="fixed inset-0 z-30" onClick={() => setProfileOpen(false)} />
                                     <div className="absolute right-0 z-40 mt-1 w-48 rounded-xl bg-white border border-gray-200 shadow-lg py-1">
+                                        <Link href="/account/password" className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                            <KeyRound className="h-4 w-4" />
+                                            Change Password
+                                        </Link>
                                         <Link href="/logout" method="post" as="button" className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                             <LogOut className="h-4 w-4" />
                                             Sign Out

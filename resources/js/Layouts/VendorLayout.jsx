@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     LayoutDashboard, Users, Package, ShoppingCart,
     BarChart3, TrendingUp, Tag, Settings, ShoppingBag,
-    Menu, X, LogOut, ChevronDown, Store, Building2, UserCog, Wallet
+    Menu, X, LogOut, ChevronDown, Store, Building2, UserCog, Wallet, KeyRound
 } from 'lucide-react';
 import { useStorePath, useCan } from '@/lib/storePath';
 
@@ -120,6 +120,13 @@ export default function VendorLayout({ children, title }) {
                                                     Settings
                                                 </Link>
                                             )}
+                                            <Link
+                                                href="/account/password"
+                                                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                            >
+                                                <KeyRound className="h-4 w-4" />
+                                                Change Password
+                                            </Link>
                                             <Link
                                                 href="/logout"
                                                 method="post"
