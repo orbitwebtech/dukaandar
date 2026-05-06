@@ -10,13 +10,14 @@ class Product extends Model
 {
     protected $fillable = [
         'store_id', 'name', 'sku', 'barcode', 'type', 'category_id',
-        'description', 'cost_price', 'selling_price', 'stock_qty',
+        'description', 'cost_price', 'tax_rate', 'selling_price', 'stock_qty',
         'low_stock_threshold', 'images', 'status', 'last_restocked_at',
     ];
 
     protected $casts = [
         'images' => 'array',
         'cost_price' => 'decimal:2',
+        'tax_rate' => 'decimal:2',
         'selling_price' => 'decimal:2',
         'last_restocked_at' => 'datetime',
     ];

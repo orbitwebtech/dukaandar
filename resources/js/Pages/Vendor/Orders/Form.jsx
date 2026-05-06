@@ -439,11 +439,35 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
     };
 
     // ---- Totals ----
+    const pricesIncludeTax = !!settings?.prices_include_tax;
+    const productById = useMemo(() => {
+        const m = {};
+        for (const p of products) m[p.id] = p;
+        return m;
+    }, [products]);
+
     const subtotal = data.items.reduce((sum, item) => {
         return sum + calcLineTotal(item.qty, item.unit_price, item.line_discount_type, item.line_discount_value);
     }, 0);
 
-    const grandTotal = calcGrandTotal(subtotal, data.discount_type, data.discount_value);
+    const taxTotal = data.items.reduce((sum, item) => {
+        const lineTotal = calcLineTotal(item.qty, item.unit_price, item.line_discount_type, item.line_discount_value);
+        const rate = Number(productById[item.product_id]?.tax_rate || 0);
+        if (!lineTotal || !rate) return sum;
+        return sum + (pricesIncludeTax
+            ? (lineTotal * rate) / (100 + rate)
+            : (lineTotal * rate) / 100);
+    }, 0);
+
+    const orderDiscountAmount = data.discount_type === 'flat'
+        ? Math.min(subtotal, Number(data.discount_value || 0))
+        : data.discount_type === 'percent'
+            ? subtotal * (Number(data.discount_value || 0) / 100)
+            : 0;
+
+    const grandTotal = pricesIncludeTax
+        ? Math.max(0, subtotal - orderDiscountAmount)
+        : Math.max(0, subtotal + taxTotal - orderDiscountAmount);
 
     // ---- Coupon validation ----
     const canCheckCoupon = !!data.coupon_code && !!data.customer_id && !showNewCustomer && subtotal > 0;
@@ -860,6 +884,13 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                                                 ? formatCurrency(data.discount_value)
                                                 : formatCurrency(subtotal * (Number(data.discount_value) / 100))}
                                         </span>
+                                    </div>
+                                )}
+
+                                {taxTotal > 0 && (
+                                    <div className="flex justify-between text-sm text-gray-600">
+                                        <span>GST {pricesIncludeTax ? '(included)' : ''}</span>
+                                        <span className="font-medium text-gray-900">{pricesIncludeTax ? '' : '+ '}{formatCurrency(taxTotal)}</span>
                                     </div>
                                 )}
 

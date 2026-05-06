@@ -31,7 +31,7 @@ class SettingController extends Controller
     {
         $allowed = [
             'shop_name', 'owner_name', 'whatsapp_number', 'address', 'city',
-            'gst_number', 'google_review_link', 'instagram_handle',
+            'gst_number', 'prices_include_tax', 'google_review_link', 'instagram_handle',
             'invoice_prefix', 'invoice_footer', 'whatsapp_template', 'show_cost_price',
             'review_text', 'review_reprompt_interval',
             'slow_moving_days',

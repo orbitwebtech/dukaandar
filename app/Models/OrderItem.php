@@ -10,7 +10,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id', 'store_id', 'product_id', 'variant_id',
         'qty', 'unit_price', 'line_discount_type', 'line_discount_value',
-        'line_discount_amount', 'line_total',
+        'line_discount_amount', 'line_total', 'tax_rate', 'tax_amount',
     ];
 
     public function store(): BelongsTo
@@ -23,6 +23,8 @@ class OrderItem extends Model
         'line_discount_value' => 'decimal:2',
         'line_discount_amount' => 'decimal:2',
         'line_total' => 'decimal:2',
+        'tax_rate' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
     ];
 
     public function order(): BelongsTo

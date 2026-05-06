@@ -115,6 +115,12 @@
             <td class="text-right">-₹{{ number_format($order->discount_amount, 2) }}</td>
         </tr>
         @endif
+        @if($order->tax_total > 0)
+        <tr>
+            <td>GST {{ $order->prices_include_tax ? '(included)' : '' }}</td>
+            <td class="text-right">{{ $order->prices_include_tax ? '' : '+' }}₹{{ number_format($order->tax_total, 2) }}</td>
+        </tr>
+        @endif
         <tr class="total-row">
             <td>Total</td>
             <td class="text-right">₹{{ number_format($order->total, 2) }}</td>

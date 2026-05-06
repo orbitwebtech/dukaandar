@@ -34,6 +34,7 @@ export default function Settings({ settings = {}, tenant = {} }) {
         address: settings.address || '',
         city: settings.city || '',
         gst_number: settings.gst_number || '',
+        prices_include_tax: settings.prices_include_tax === '1' || settings.prices_include_tax === true,
         google_review_link: settings.google_review_link || '',
         instagram_handle: settings.instagram_handle || '',
         invoice_prefix: settings.invoice_prefix || '',
@@ -153,6 +154,22 @@ export default function Settings({ settings = {}, tenant = {} }) {
                                         placeholder="22AAAAA0000A1Z5"
                                         error={errors.gst_number}
                                     />
+                                </Field>
+                                <Field label="Product Prices Include GST">
+                                    <label className="inline-flex items-center gap-2 mt-1">
+                                        <input
+                                            type="checkbox"
+                                            checked={!!data.prices_include_tax}
+                                            onChange={(e) => setData('prices_include_tax', e.target.checked)}
+                                            className="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                                        />
+                                        <span className="text-sm text-gray-700">
+                                            Yes — extract GST from the entered price
+                                        </span>
+                                    </label>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        When off, GST is added on top of the price you enter for each product.
+                                    </p>
                                 </Field>
                                 <Field label="Google Review Link">
                                     <TextInput

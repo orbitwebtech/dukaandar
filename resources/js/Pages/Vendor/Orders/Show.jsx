@@ -25,6 +25,8 @@ export default function Show({ order, settings = {}, invoiceLink = '', activeCou
 
     const subtotal = Number(order.subtotal || 0);
     const discountAmount = Number(order.discount_amount || 0);
+    const taxTotal = Number(order.tax_total || 0);
+    const pricesIncludeTax = !!order.prices_include_tax;
     const grandTotal = Number(order.total || 0);
 
     // ---- WhatsApp message builder ----
@@ -444,6 +446,12 @@ export default function Show({ order, settings = {}, invoiceLink = '', activeCou
                                 <div className="flex justify-between text-sm text-gray-600">
                                     <span>Discount{order.discount_type === 'percent' ? ` (${order.discount_value}%)` : ''}</span>
                                     <span className="font-medium text-red-600">- {formatCurrency(discountAmount)}</span>
+                                </div>
+                            )}
+                            {taxTotal > 0 && (
+                                <div className="flex justify-between text-sm text-gray-600">
+                                    <span>GST {pricesIncludeTax ? '(included)' : ''}</span>
+                                    <span className="font-medium text-gray-900">{pricesIncludeTax ? '' : '+ '}{formatCurrency(taxTotal)}</span>
                                 </div>
                             )}
                             <div className="border-t border-gray-200 pt-2 flex justify-between">

@@ -52,6 +52,7 @@ class OrderController extends Controller
             'review_reprompt_interval' => $store->getSetting('review_reprompt_interval', '3'),
             'whatsapp_template' => $store->getSetting('whatsapp_template'),
             'shop_name' => $store->getSetting('shop_name'),
+            'prices_include_tax' => $store->getSetting('prices_include_tax') === '1',
         ];
 
         return Inertia::render('Vendor/Orders/Form', [
@@ -158,7 +159,12 @@ class OrderController extends Controller
                 : $discountValue;
         }
 
-        $total = $subtotal - $orderDiscountAmount;
+        $pricesIncludeTax = $store->getSetting('prices_include_tax') === '1';
+        [$processedItems, $taxTotal] = $this->applyLineTaxes($processedItems, $pricesIncludeTax);
+
+        $total = $pricesIncludeTax
+            ? $subtotal - $orderDiscountAmount
+            : $subtotal + $taxTotal - $orderDiscountAmount;
 
         $order = $store->orders()->create([
             'order_number' => Order::generateOrderNumber($store->id),
@@ -168,6 +174,8 @@ class OrderController extends Controller
             'discount_type' => $discountType,
             'discount_value' => $discountValue,
             'discount_amount' => round($orderDiscountAmount, 2),
+            'tax_total' => $taxTotal,
+            'prices_include_tax' => $pricesIncludeTax,
             'total' => round(max(0, $total), 2),
             'payment_method' => $validated['payment_method'],
             'payment_status' => $validated['payment_status'],
@@ -192,6 +200,8 @@ class OrderController extends Controller
                 'line_discount_value' => $item['line_discount_value'] ?? 0,
                 'line_discount_amount' => $item['line_discount_amount'],
                 'line_total' => $item['line_total'],
+                'tax_rate' => $item['tax_rate'],
+                'tax_amount' => $item['tax_amount'],
             ]);
         }
 
@@ -278,6 +288,9 @@ class OrderController extends Controller
             'customers' => $customers,
             'products' => $products,
             'nextOrderNumber' => $order->order_number,
+            'settings' => [
+                'prices_include_tax' => $store->getSetting('prices_include_tax') === '1',
+            ],
         ]);
     }
 
@@ -381,7 +394,12 @@ class OrderController extends Controller
                 : $discountValue;
         }
 
-        $total = $subtotal - $orderDiscountAmount;
+        $pricesIncludeTax = $store->getSetting('prices_include_tax') === '1';
+        [$processedItems, $taxTotal] = $this->applyLineTaxes($processedItems, $pricesIncludeTax);
+
+        $total = $pricesIncludeTax
+            ? $subtotal - $orderDiscountAmount
+            : $subtotal + $taxTotal - $orderDiscountAmount;
 
         // 5. Update order header
         $order->update([
@@ -390,6 +408,8 @@ class OrderController extends Controller
             'discount_type' => $discountType,
             'discount_value' => $discountValue,
             'discount_amount' => round($orderDiscountAmount, 2),
+            'tax_total' => $taxTotal,
+            'prices_include_tax' => $pricesIncludeTax,
             'total' => round(max(0, $total), 2),
             'payment_method' => $validated['payment_method'],
             'payment_status' => $validated['payment_status'],
@@ -412,6 +432,8 @@ class OrderController extends Controller
                 'line_discount_value' => $item['line_discount_value'] ?? 0,
                 'line_discount_amount' => $item['line_discount_amount'],
                 'line_total' => $item['line_total'],
+                'tax_rate' => $item['tax_rate'],
+                'tax_amount' => $item['tax_amount'],
             ]);
         }
 
@@ -575,5 +597,37 @@ class OrderController extends Controller
             }
         }
         return $errors;
+    }
+
+    /**
+     * Stamp each line with its product's tax_rate and a computed tax_amount.
+     * In inclusive mode the line_total already contains tax (extracted out);
+     * in exclusive mode tax is added on top.
+     */
+    private function applyLineTaxes(array $items, bool $pricesIncludeTax): array
+    {
+        $productIds = collect($items)->pluck('product_id')->unique()->all();
+        $rates = Product::whereIn('id', $productIds)->pluck('tax_rate', 'id')->all();
+
+        $taxTotal = 0;
+        $stamped = [];
+        foreach ($items as $item) {
+            $rate = (float) ($rates[$item['product_id']] ?? 0);
+            $lineTotal = (float) $item['line_total'];
+            if ($rate <= 0) {
+                $taxAmount = 0;
+            } elseif ($pricesIncludeTax) {
+                $taxAmount = $lineTotal * $rate / (100 + $rate);
+            } else {
+                $taxAmount = $lineTotal * $rate / 100;
+            }
+            $taxTotal += $taxAmount;
+            $stamped[] = array_merge($item, [
+                'tax_rate' => $rate,
+                'tax_amount' => round($taxAmount, 2),
+            ]);
+        }
+
+        return [$stamped, round($taxTotal, 2)];
     }
 }

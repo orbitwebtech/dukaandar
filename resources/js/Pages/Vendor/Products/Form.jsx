@@ -176,6 +176,7 @@ export default function Form({ product, categories = [] }) {
         category_id: product?.category_id || '',
         description: product?.description || '',
         cost_price: product?.cost_price || '',
+        tax_rate: product?.tax_rate ?? '',
         selling_price: product?.selling_price || '',
         stock_qty: product?.stock_qty ?? '',
         low_stock_threshold: product?.low_stock_threshold ?? 5,
@@ -328,6 +329,24 @@ export default function Form({ product, categories = [] }) {
                                 <span className="text-sm font-medium text-gray-700 capitalize">{t}</span>
                             </label>
                         ))}
+                    </div>
+                </Card>
+
+                <Card>
+                    <CardHeader title="GST" subtitle="Applies to every variant of this product" />
+                    <div className="max-w-xs">
+                        <Label>GST Rate (%)</Label>
+                        <TextInput
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={data.tax_rate}
+                            onChange={(e) => setData('tax_rate', e.target.value)}
+                            placeholder="0"
+                            error={errors.tax_rate}
+                        />
+                        <p className="mt-1 text-xs text-gray-500">Common slabs: 0, 5, 12, 18, 28. Leave 0 for non-GST items.</p>
                     </div>
                 </Card>
 
