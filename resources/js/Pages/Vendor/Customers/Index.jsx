@@ -48,20 +48,22 @@ export default function CustomersIndex({ customers, filters = {}, cities = [] })
             ),
         },
         { key: 'whatsapp', label: 'WhatsApp', render: (row) => <span className="text-sm text-gray-600">{row.whatsapp || '—'}</span> },
-        { key: 'city', label: 'City', render: (row) => <span className="text-sm text-gray-600">{row.city || '—'}</span> },
+        { key: 'city', label: 'City', hideOnMobile: true, render: (row) => <span className="text-sm text-gray-600">{row.city || '—'}</span> },
         {
             key: 'type',
             label: 'Type',
+            hideOnMobile: true,
             render: (row) => <Badge color={TYPE_BADGE[row.type] || 'gray'}>{TYPE_LABELS[row.type] || row.type || '—'}</Badge>,
         },
-        { key: 'total_orders', label: 'Orders', align: 'right', render: (row) => <span className="text-sm text-gray-700">{row.total_orders ?? 0}</span> },
+        { key: 'total_orders', label: 'Orders', align: 'right', hideOnMobile: true, render: (row) => <span className="text-sm text-gray-700">{row.total_orders ?? 0}</span> },
         { key: 'total_spent', label: 'Total Spent', align: 'right', render: (row) => <span className="text-sm font-medium text-gray-900">{formatCurrency(row.total_spent)}</span> },
-        { key: 'last_order_date', label: 'Last Order', render: (row) => <span className="text-sm text-gray-500">{formatDate(row.last_order_date)}</span> },
+        { key: 'last_order_date', label: 'Last Order', hideOnMobile: true, render: (row) => <span className="text-sm text-gray-500">{formatDate(row.last_order_date)}</span> },
         {
             key: 'actions',
             label: 'Actions',
             align: 'right',
             sortable: false,
+            hideOnMobile: true,
             render: (row) => (
                 <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <a

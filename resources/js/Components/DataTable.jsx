@@ -143,7 +143,7 @@ export default function DataTable({
                                         key={col.key}
                                         className={`${headerPadding} text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap ${
                                             col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
-                                        } ${col.sortable !== false ? 'cursor-pointer select-none hover:bg-gray-100 transition' : ''} ${col.className || ''}`}
+                                        } ${col.sortable !== false ? 'cursor-pointer select-none hover:bg-gray-100 transition' : ''} ${col.hideOnMobile ? 'hidden sm:table-cell' : ''} ${col.className || ''}`}
                                         onClick={() => col.sortable !== false && handleSort(col.key)}
                                     >
                                         <span className="inline-flex items-center gap-1.5">
@@ -176,7 +176,7 @@ export default function DataTable({
                                             key={col.key}
                                             className={`${cellPadding} text-sm whitespace-nowrap ${
                                                 col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
-                                            } ${col.cellClassName || ''}`}
+                                            } ${col.hideOnMobile ? 'hidden sm:table-cell' : ''} ${col.cellClassName || ''}`}
                                         >
                                             {col.render ? col.render(row, rowIdx) : getNestedValue(row, col.key) ?? '—'}
                                         </td>

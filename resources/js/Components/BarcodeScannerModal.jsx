@@ -220,12 +220,12 @@ export default function BarcodeScannerModal({ show, onClose, onScan }) {
                     <p className="text-xs text-gray-500">Starting camera…</p>
                 )}
 
-                <div className="relative w-full bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '16/10' }}>
+                <div className="relative w-full bg-black rounded-lg overflow-hidden min-h-[280px] sm:min-h-[320px]" style={{ aspectRatio: '4/3' }}>
                     <video
                         ref={videoRef}
                         playsInline
                         muted
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
                     />
                     {phase === 'scanning' && (
                         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

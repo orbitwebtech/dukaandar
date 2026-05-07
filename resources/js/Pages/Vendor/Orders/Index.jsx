@@ -57,6 +57,7 @@ export default function Index({ orders, filters = {} }) {
         {
             key: 'order_date',
             label: 'Date',
+            hideOnMobile: true,
             render: (row) => <span className="text-sm text-gray-500">{formatDate(row.order_date)}</span>,
         },
         {
@@ -73,6 +74,7 @@ export default function Index({ orders, filters = {} }) {
         {
             key: 'payment_status',
             label: 'Payment',
+            hideOnMobile: true,
             render: (row) => <Badge color={paymentBadge[row.payment_status] || 'gray'}>{capitalize(row.payment_status)}</Badge>,
         },
         {
@@ -80,6 +82,7 @@ export default function Index({ orders, filters = {} }) {
             label: 'Actions',
             align: 'right',
             sortable: false,
+            hideOnMobile: true,
             render: (row) => (
                 <div onClick={(e) => e.stopPropagation()}>
                     <Link href={url(`/orders/${row.id}`)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 transition">

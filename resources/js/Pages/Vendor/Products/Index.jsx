@@ -49,11 +49,13 @@ export default function Index({ products, categories = [], filters = {} }) {
         {
             key: 'category.name',
             label: 'Category',
+            hideOnMobile: true,
             render: (row) => row.category ? <Badge color="primary">{row.category.name}</Badge> : <span className="text-gray-400">—</span>,
         },
         {
             key: 'type',
             label: 'Type',
+            hideOnMobile: true,
             render: (row) => (
                 <Badge color={row.type === 'variable' ? 'blue' : 'gray'}>
                     {row.type === 'variable' ? 'Variable' : 'Simple'}
@@ -96,6 +98,7 @@ export default function Index({ products, categories = [], filters = {} }) {
         {
             key: 'status',
             label: 'Status',
+            hideOnMobile: true,
             render: (row) => <Badge color={row.status === 'active' ? 'success' : 'gray'}>{row.status === 'active' ? 'Active' : 'Draft'}</Badge>,
         },
         {
@@ -103,6 +106,7 @@ export default function Index({ products, categories = [], filters = {} }) {
             label: 'Actions',
             align: 'right',
             sortable: false,
+            hideOnMobile: true,
             render: (row) => (
                 <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <Link href={url(`/products/${row.id}`)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-primary-600 transition" title="View">
