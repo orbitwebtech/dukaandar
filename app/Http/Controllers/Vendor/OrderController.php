@@ -297,6 +297,10 @@ class OrderController extends Controller
     public function update(Request $request, Store $store, Order $order, CouponService $coupons)
     {
         $validated = $request->validate([
+            'customer_id' => 'nullable|exists:customers,id',
+            'new_customer' => 'nullable|array',
+            'new_customer.name' => 'required_without:customer_id|string|max:255',
+            'new_customer.whatsapp' => 'required_without:customer_id|string|max:15',
             'order_date' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -316,6 +320,16 @@ class OrderController extends Controller
 
         $oldStatus = $order->status;
         $wasDelivered = $oldStatus === 'delivered';
+
+        // Resolve customer — either reuse existing or create new on the fly
+        $customerId = $validated['customer_id'] ?? null;
+        if (!$customerId && !empty($validated['new_customer'])) {
+            $customer = $store->customers()->create([
+                'name' => $validated['new_customer']['name'],
+                'whatsapp' => $validated['new_customer']['whatsapp'],
+            ]);
+            $customerId = $customer->id;
+        }
 
         // Stock check (skip if cancelled — those don't reserve stock)
         if ($validated['status'] !== 'cancelled') {
@@ -373,7 +387,10 @@ class OrderController extends Controller
         $newIssuance = null;
 
         if (!empty($validated['coupon_code'])) {
-            $newIssuance = $coupons->findValidIssuance($store, $order->customer, $validated['coupon_code']);
+            $couponCustomer = Customer::find($customerId);
+            $newIssuance = $couponCustomer
+                ? $coupons->findValidIssuance($store, $couponCustomer, $validated['coupon_code'])
+                : null;
             if (!$newIssuance) {
                 return back()->withErrors([
                     'coupon_code' => 'This coupon is invalid, expired, or not issued to this customer.',
@@ -402,7 +419,9 @@ class OrderController extends Controller
             : $subtotal + $taxTotal - $orderDiscountAmount;
 
         // 5. Update order header
+        $previousCustomerId = $order->customer_id;
         $order->update([
+            'customer_id' => $customerId,
             'order_date' => $validated['order_date'],
             'subtotal' => round($subtotal, 2),
             'discount_type' => $discountType,
@@ -457,7 +476,11 @@ class OrderController extends Controller
         }
 
         // 9. Customer stats + auto-issue on first delivery
+        $order->load('customer');
         $order->customer->updateStats();
+        if ($previousCustomerId && $previousCustomerId !== $order->customer_id) {
+            Customer::find($previousCustomerId)?->updateStats();
+        }
         if (!$wasDelivered && $validated['status'] === 'delivered') {
             $coupons->autoIssueFor($order->customer->fresh());
         }
@@ -516,6 +539,28 @@ class OrderController extends Controller
     public function destroy(Store $store, Order $order)
     {
         $customerId = $order->customer_id;
+
+        // Revert stock if the order had decremented it
+        if ($order->status === 'delivered') {
+            $order->load('items.product', 'items.variant');
+            foreach ($order->items as $item) {
+                if ($item->variant_id && $item->variant) {
+                    $item->variant->stock_qty = $item->variant->stock_qty + $item->qty;
+                    $item->variant->save();
+                } elseif ($item->product) {
+                    $item->product->stock_qty = $item->product->stock_qty + $item->qty;
+                    $item->product->save();
+                }
+            }
+        }
+
+        // Release any coupon that was redeemed against this order
+        $issuance = CouponIssuance::with('coupon')->where('used_order_id', $order->id)->first();
+        if ($issuance) {
+            $issuance->coupon->decrement('times_redeemed');
+            $issuance->update(['used_at' => null, 'used_order_id' => null]);
+        }
+
         $order->delete();
 
         $customer = Customer::find($customerId);

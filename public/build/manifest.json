@@ -354,7 +354,7 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-BRylhsLI.css",
+    "file": "assets/app-CUTIKAoY.css",
     "name": "app",
     "names": [
       "app.css"
@@ -761,7 +761,7 @@
     ]
   },
   "resources/js/Pages/Vendor/Orders/Show.jsx": {
-    "file": "assets/Show-ChPE67rN.js",
+    "file": "assets/Show-DMKcNLoT.js",
     "name": "Show",
     "src": "resources/js/Pages/Vendor/Orders/Show.jsx",
     "isDynamicEntry": true,
@@ -777,6 +777,7 @@
       "_whatsapp-D-fyrWnP.js",
       "_VendorLayout-ijDzAzGx.js",
       "_pencil-DI33OryH.js",
+      "_trash-2-CVfzUP7Z.js",
       "_Badge-BhuNDxQo.js",
       "_Button-BsfCyZUD.js",
       "_Card-DgQ87LSz.js"
@@ -954,7 +955,7 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-CsQgBm5t.js",
+    "file": "assets/app-Dn6dQhkP.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
@@ -1000,7 +1001,7 @@
       "resources/js/Pages/Vendor/Settings/Index.jsx"
     ],
     "css": [
-      "assets/app-BRylhsLI.css"
+      "assets/app-CUTIKAoY.css"
     ]
   }
 }

@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import VendorLayout from '@/Layouts/VendorLayout';
-import { useStorePath } from '@/lib/storePath';
+import { useStorePath, useCan } from '@/lib/storePath';
 import { waLink, normalizePhone } from '@/lib/whatsapp';
 import Card, { CardHeader } from '@/Components/Card';
 import Badge from '@/Components/Badge';
@@ -9,7 +9,7 @@ import Button from '@/Components/Button';
 import Modal from '@/Components/Modal';
 import {
     MessageCircle, Star, ExternalLink, Phone, User,
-    FileText, ChevronDown, Download, Send, ArrowLeft, CheckCircle, Pencil,
+    FileText, ChevronDown, Download, Send, ArrowLeft, CheckCircle, Pencil, Trash2,
 } from 'lucide-react';
 
 const statusBadgeColor = { confirmed: 'blue', delivered: 'success', cancelled: 'danger', draft: 'gray' };
@@ -20,8 +20,14 @@ const cleanPhone = normalizePhone;
 
 export default function Show({ order, settings = {}, invoiceLink = '', activeCoupons = [] }) {
     const url = useStorePath();
+    const can = useCan();
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [showInvoicePanel, setShowInvoicePanel] = useState(false);
+
+    const handleDelete = () => {
+        if (!window.confirm(`Delete order #${order.order_number}? This will revert stock and release any coupon. This cannot be undone.`)) return;
+        router.delete(url(`/orders/${order.id}`));
+    };
 
     const subtotal = Number(order.subtotal || 0);
     const discountAmount = Number(order.discount_amount || 0);
@@ -200,12 +206,23 @@ export default function Show({ order, settings = {}, invoiceLink = '', activeCou
                     </div>
                     {order.invoice_sent && <Badge color="success"><CheckCircle className="h-3 w-3 mr-1" /> Invoice Sent</Badge>}
 
-                    <Link
-                        href={url(`/orders/${order.id}/edit`)}
-                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-                    >
-                        <Pencil className="h-4 w-4" /> Edit Order
-                    </Link>
+                    <div className="ml-auto flex items-center gap-2">
+                        <Link
+                            href={url(`/orders/${order.id}/edit`)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                        >
+                            <Pencil className="h-4 w-4" /> Edit Order
+                        </Link>
+                        {can('orders.delete') && (
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition"
+                            >
+                                <Trash2 className="h-4 w-4" /> Delete
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* ── Invoice & WhatsApp Section ── */}
