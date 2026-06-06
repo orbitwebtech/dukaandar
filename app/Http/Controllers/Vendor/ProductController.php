@@ -230,6 +230,43 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Product updated successfully.');
     }
 
+    public function duplicate(Store $store, Product $product)
+    {
+        $product->load('variants');
+
+        $copy = $store->products()->create([
+            'name' => $product->name . ' (Copy)',
+            'sku' => 'SKU-' . strtoupper(substr(md5(uniqid()), 0, 8)),
+            'barcode' => null,
+            'type' => $product->type,
+            'category_id' => $product->category_id,
+            'description' => $product->description,
+            'cost_price' => $product->cost_price,
+            'tax_rate' => $product->tax_rate,
+            'selling_price' => $product->selling_price,
+            'stock_qty' => 0,
+            'low_stock_threshold' => $product->low_stock_threshold,
+            'status' => 'draft',
+        ]);
+
+        foreach ($product->variants as $v) {
+            ProductVariant::create([
+                'product_id' => $copy->id,
+                'store_id' => $store->id,
+                'sku' => null,
+                'barcode' => null,
+                'attributes' => $v->attributes,
+                'price' => $v->price,
+                'cost_price' => $v->cost_price,
+                'stock_qty' => 0,
+                'low_stock_threshold' => $v->low_stock_threshold,
+                'is_default' => $v->is_default,
+            ]);
+        }
+
+        return redirect()->route('products.edit', $copy)->with('success', 'Product duplicated as draft. Adjust and save to publish.');
+    }
+
     public function destroy(Store $store, Product $product)
     {
         $product->delete();

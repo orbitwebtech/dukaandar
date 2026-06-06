@@ -1,8 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Package, Plus, Eye, Pencil, Trash2, Upload } from 'lucide-react';
+import { Package, Plus, Eye, Pencil, Trash2, Upload, Copy } from 'lucide-react';
 import { useState } from 'react';
 import VendorLayout from '@/Layouts/VendorLayout';
-import { useStorePath } from '@/lib/storePath';
+import { useStorePath, useCan } from '@/lib/storePath';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Button';
 import DataTable from '@/Components/DataTable';
@@ -18,6 +18,7 @@ function StockBadge({ qty, threshold }) {
 
 export default function Index({ products, categories = [], filters = {} }) {
     const url = useStorePath();
+    const can = useCan();
     const [search, setSearch] = useState(filters.search || '');
 
     const categoryOptions = categories.map((c) => ({ value: c.id, label: c.name }));
@@ -31,6 +32,12 @@ export default function Index({ products, categories = [], filters = {} }) {
         e.stopPropagation();
         if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
         router.delete(url(`/products/${product.id}`));
+    }
+
+    function handleDuplicate(e, product) {
+        e.stopPropagation();
+        if (!window.confirm(`Duplicate "${product.name}" as a new draft?`)) return;
+        router.post(url(`/products/${product.id}/duplicate`));
     }
 
     const columns = [
@@ -115,6 +122,11 @@ export default function Index({ products, categories = [], filters = {} }) {
                     <Link href={url(`/products/${row.id}/edit`)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-primary-600 transition" title="Edit">
                         <Pencil className="h-4 w-4" />
                     </Link>
+                    {can('products.create') && (
+                        <button onClick={(e) => handleDuplicate(e, row)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-primary-600 transition" title="Duplicate">
+                            <Copy className="h-4 w-4" />
+                        </button>
+                    )}
                     <button onClick={(e) => handleDelete(e, row)} className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition" title="Delete">
                         <Trash2 className="h-4 w-4" />
                     </button>

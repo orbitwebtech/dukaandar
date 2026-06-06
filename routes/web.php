@@ -132,6 +132,8 @@ Route::prefix('store/{store}')->middleware(['auth', 'verified', 'system_role:mem
         ->middleware('store.can:products.update')->name('products.edit');
     Route::put('/products/{product}', [ProductController::class, 'update'])
         ->middleware('store.can:products.update')->name('products.update');
+    Route::post('/products/{product}/duplicate', [ProductController::class, 'duplicate'])
+        ->middleware('store.can:products.create')->name('products.duplicate');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])
         ->middleware('store.can:products.delete')->name('products.destroy');
     Route::post('/products/{product}/adjust-stock', [ProductController::class, 'adjustStock'])
