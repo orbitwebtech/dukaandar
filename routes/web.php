@@ -156,6 +156,8 @@ Route::prefix('store/{store}')->middleware(['auth', 'verified', 'system_role:mem
         ->middleware('store.can:orders.update')->name('orders.update');
     Route::patch('/orders/{order}/quick', [OrderController::class, 'quickUpdate'])
         ->middleware('store.can:orders.update')->name('orders.quick-update');
+    Route::post('/orders/{order}/duplicate', [OrderController::class, 'duplicate'])
+        ->middleware('store.can:orders.create')->name('orders.duplicate');
     Route::delete('/orders/{order}', [OrderController::class, 'destroy'])
         ->middleware('store.can:orders.delete')->name('orders.destroy');
     Route::post('/orders/{order}/send-invoice', [OrderController::class, 'sendInvoice'])

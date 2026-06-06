@@ -536,6 +536,48 @@ class OrderController extends Controller
         return back()->with('success', 'Order updated.');
     }
 
+    public function duplicate(Store $store, Order $order)
+    {
+        $order->load('items');
+
+        $copy = $store->orders()->create([
+            'order_number' => Order::generateOrderNumber($store->id),
+            'customer_id' => $order->customer_id,
+            'order_date' => now()->toDateString(),
+            'subtotal' => $order->subtotal,
+            'discount_type' => $order->discount_type,
+            'discount_value' => $order->discount_value,
+            'discount_amount' => $order->discount_amount,
+            'tax_total' => $order->tax_total,
+            'prices_include_tax' => $order->prices_include_tax,
+            'total' => $order->total,
+            'payment_method' => $order->payment_method,
+            'payment_status' => 'pending',
+            'status' => 'draft',
+            'notes' => $order->notes,
+            'coupon_code' => null,
+        ]);
+
+        foreach ($order->items as $item) {
+            OrderItem::create([
+                'order_id' => $copy->id,
+                'store_id' => $store->id,
+                'product_id' => $item->product_id,
+                'variant_id' => $item->variant_id,
+                'qty' => $item->qty,
+                'unit_price' => $item->unit_price,
+                'line_discount_type' => $item->line_discount_type,
+                'line_discount_value' => $item->line_discount_value,
+                'line_discount_amount' => $item->line_discount_amount,
+                'line_total' => $item->line_total,
+                'tax_rate' => $item->tax_rate,
+                'tax_amount' => $item->tax_amount,
+            ]);
+        }
+
+        return redirect()->route('orders.edit', $copy)->with('success', 'Order duplicated as draft. Edit and save to confirm.');
+    }
+
     public function destroy(Store $store, Order $order)
     {
         $customerId = $order->customer_id;

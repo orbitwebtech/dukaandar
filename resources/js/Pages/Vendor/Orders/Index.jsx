@@ -1,7 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ShoppingCart, Plus, Eye, Search } from 'lucide-react';
+import { ShoppingCart, Plus, Eye, Search, Copy, Trash2 } from 'lucide-react';
 import VendorLayout from '@/Layouts/VendorLayout';
-import { useStorePath } from '@/lib/storePath';
+import { useStorePath, useCan } from '@/lib/storePath';
 import Badge from '@/Components/Badge';
 import Button from '@/Components/Button';
 import DataTable from '@/Components/DataTable';
@@ -29,10 +29,23 @@ const paymentOptions = [
 
 export default function Index({ orders, filters = {} }) {
     const url = useStorePath();
+    const can = useCan();
     const data = orders?.data || [];
 
     const handleFilter = (key, value) => {
         router.get(url('/orders'), { ...filters, [key]: value || undefined }, { preserveState: true, replace: true });
+    };
+
+    const handleDuplicate = (e, order) => {
+        e.stopPropagation();
+        if (!window.confirm(`Duplicate order #${order.order_number} as a new draft?`)) return;
+        router.post(url(`/orders/${order.id}/duplicate`));
+    };
+
+    const handleDelete = (e, order) => {
+        e.stopPropagation();
+        if (!window.confirm(`Delete order #${order.order_number}? Stock and coupons will be restored. This cannot be undone.`)) return;
+        router.delete(url(`/orders/${order.id}`), { preserveScroll: true });
     };
 
     const selectedStatus = statusOptions.find((o) => o.value === (filters.status || '')) || statusOptions[0];
@@ -84,10 +97,20 @@ export default function Index({ orders, filters = {} }) {
             sortable: false,
             hideOnMobile: true,
             render: (row) => (
-                <div onClick={(e) => e.stopPropagation()}>
-                    <Link href={url(`/orders/${row.id}`)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 transition">
-                        <Eye className="h-3.5 w-3.5" /> View
+                <div className="inline-flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <Link href={url(`/orders/${row.id}`)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-primary-600 transition" title="View">
+                        <Eye className="h-4 w-4" />
                     </Link>
+                    {can('orders.create') && (
+                        <button onClick={(e) => handleDuplicate(e, row)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-primary-600 transition" title="Duplicate">
+                            <Copy className="h-4 w-4" />
+                        </button>
+                    )}
+                    {can('orders.delete') && (
+                        <button onClick={(e) => handleDelete(e, row)} className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition" title="Delete">
+                            <Trash2 className="h-4 w-4" />
+                        </button>
+                    )}
                 </div>
             ),
         },

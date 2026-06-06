@@ -744,18 +744,20 @@
     ]
   },
   "resources/js/Pages/Vendor/Orders/Index.jsx": {
-    "file": "assets/Index-cSl4CTLE.js",
+    "file": "assets/Index-DpO3ZWUa.js",
     "name": "Index",
     "src": "resources/js/Pages/Vendor/Orders/Index.jsx",
     "isDynamicEntry": true,
     "imports": [
       "_jsx-runtime-BhPMO2zw.js",
       "_SearchableSelect-dc4RJ3Mn.js",
+      "_createLucideIcon-DNjLDHq3.js",
       "_DataTable-DuRdRsSD.js",
       "_eye-DrUpqhwt.js",
       "_VendorLayout-ijDzAzGx.js",
       "_plus-Bkqq4UBu.js",
       "_shopping-cart-BnU1ODGV.js",
+      "_trash-2-CVfzUP7Z.js",
       "_Badge-BhuNDxQo.js",
       "_Button-BsfCyZUD.js"
     ]
@@ -955,7 +957,7 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-Dn6dQhkP.js",
+    "file": "assets/app-l5hLA1n7.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
