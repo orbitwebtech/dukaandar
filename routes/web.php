@@ -140,8 +140,12 @@ Route::prefix('store/{store}')->middleware(['auth', 'verified', 'system_role:mem
         ->middleware('store.can:products.update')->name('products.adjust-stock');
 
     // Categories
+    Route::get('/categories', [CategoryController::class, 'index'])
+        ->middleware('store.can:categories.read')->name('categories.index');
     Route::post('/categories', [CategoryController::class, 'store'])
         ->middleware('store.can:categories.create')->name('categories.store');
+    Route::put('/categories/{category}', [CategoryController::class, 'update'])
+        ->middleware('store.can:categories.update')->name('categories.update');
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])
         ->middleware('store.can:categories.delete')->name('categories.destroy');
 
