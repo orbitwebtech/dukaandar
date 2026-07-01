@@ -21,6 +21,31 @@ class Customer extends Model
         'reviewed_at' => 'datetime',
     ];
 
+    /**
+     * Canonicalise a WhatsApp number to "+<countrycode><national>" (digits only).
+     * Bare 10-digit numbers are assumed to be Indian (+91). Shared by the customer
+     * controllers and the backfill migration so stored values stay consistent.
+     */
+    public static function normalizeWhatsapp(?string $value): string
+    {
+        $raw = trim((string) $value);
+        $hasPlus = str_starts_with($raw, '+');
+        $digits = preg_replace('/\D/', '', $raw);
+        if ($digits === '') {
+            return '';
+        }
+        if ($hasPlus) {
+            return '+' . $digits;
+        }
+        if (strlen($digits) === 10) {
+            return '+91' . $digits;
+        }
+        if (strlen($digits) === 11 && str_starts_with($digits, '0')) {
+            return '+91' . substr($digits, 1);
+        }
+        return '+' . $digits;
+    }
+
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);

@@ -69,7 +69,7 @@ class OrderController extends Controller
             'customer_id' => 'nullable|exists:customers,id',
             'new_customer' => 'nullable|array',
             'new_customer.name' => 'required_without:customer_id|string|max:255',
-            'new_customer.whatsapp' => 'required_without:customer_id|string|max:15',
+            'new_customer.whatsapp' => 'required_without:customer_id|string|max:20',
             'order_date' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -100,7 +100,7 @@ class OrderController extends Controller
         if (!$customerId && !empty($validated['new_customer'])) {
             $customer = $store->customers()->create([
                 'name' => $validated['new_customer']['name'],
-                'whatsapp' => $validated['new_customer']['whatsapp'],
+                'whatsapp' => Customer::normalizeWhatsapp($validated['new_customer']['whatsapp']),
             ]);
             $customerId = $customer->id;
         }
@@ -303,7 +303,7 @@ class OrderController extends Controller
             'customer_id' => 'nullable|exists:customers,id',
             'new_customer' => 'nullable|array',
             'new_customer.name' => 'required_without:customer_id|string|max:255',
-            'new_customer.whatsapp' => 'required_without:customer_id|string|max:15',
+            'new_customer.whatsapp' => 'required_without:customer_id|string|max:20',
             'order_date' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -330,7 +330,7 @@ class OrderController extends Controller
         if (!$customerId && !empty($validated['new_customer'])) {
             $customer = $store->customers()->create([
                 'name' => $validated['new_customer']['name'],
-                'whatsapp' => $validated['new_customer']['whatsapp'],
+                'whatsapp' => Customer::normalizeWhatsapp($validated['new_customer']['whatsapp']),
             ]);
             $customerId = $customer->id;
         }

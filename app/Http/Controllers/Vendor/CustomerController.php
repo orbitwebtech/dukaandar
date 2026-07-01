@@ -56,12 +56,14 @@ class CustomerController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'whatsapp' => 'required|string|max:15',
+            'whatsapp' => 'required|string|max:20',
             'city' => 'nullable|string|max:255',
             'address' => 'nullable|string|max:1000',
             'size_pref' => 'nullable|array',
             'notes' => 'nullable|string',
         ]);
+
+        $validated['whatsapp'] = Customer::normalizeWhatsapp($validated['whatsapp']);
 
         if ($store->customers()->where('whatsapp', $validated['whatsapp'])->exists()) {
             return back()->withErrors(['whatsapp' => 'A customer with this WhatsApp number already exists.']);
@@ -131,12 +133,14 @@ class CustomerController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'whatsapp' => 'required|string|max:15',
+            'whatsapp' => 'required|string|max:20',
             'city' => 'nullable|string|max:255',
             'address' => 'nullable|string|max:1000',
             'size_pref' => 'nullable|array',
             'notes' => 'nullable|string',
         ]);
+
+        $validated['whatsapp'] = Customer::normalizeWhatsapp($validated['whatsapp']);
 
         $exists = $store->customers()
             ->where('whatsapp', $validated['whatsapp'])

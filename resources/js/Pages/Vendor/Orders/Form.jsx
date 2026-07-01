@@ -7,6 +7,8 @@ import SearchableSelect from '@/Components/SearchableSelect';
 import TextInput from '@/Components/TextInput';
 import Label from '@/Components/Label';
 import Button from '@/Components/Button';
+import PhoneInput from '@/Components/PhoneInput';
+import { splitPhone, combinePhone, DEFAULT_DIAL } from '@/lib/countryCodes';
 import { Plus, Trash2, UserPlus, ShoppingCart, X, Camera, Percent } from 'lucide-react';
 import BarcodeScannerModal from '@/Components/BarcodeScannerModal';
 
@@ -255,6 +257,7 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
     });
 
     const [showNewCustomer, setShowNewCustomer] = useState(false);
+    const [newPhone, setNewPhone] = useState({ dial: DEFAULT_DIAL, national: '' });
     const [customerSearch, setCustomerSearch] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [scanInput, setScanInput] = useState('');
@@ -428,14 +431,22 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
         setData('customer_id', null);
         // If input looks like a phone number, pre-fill whatsapp; otherwise pre-fill name
         const isPhone = /^\+?\d[\d\s-]{5,}$/.test(inputValue?.trim() || '');
+        const phone = isPhone ? splitPhone(inputValue) : { dial: DEFAULT_DIAL, national: '' };
+        setNewPhone(phone);
         setData('new_customer', {
             name: isPhone ? '' : (inputValue || ''),
-            whatsapp: isPhone ? (inputValue || '') : '',
+            whatsapp: isPhone ? combinePhone(phone.dial, phone.national) : '',
         });
+    };
+
+    const handleNewPhoneChange = (nextDial, nextNational) => {
+        setNewPhone({ dial: nextDial, national: nextNational });
+        setData('new_customer', { ...data.new_customer, whatsapp: combinePhone(nextDial, nextNational) });
     };
 
     const cancelNewCustomer = () => {
         setShowNewCustomer(false);
+        setNewPhone({ dial: DEFAULT_DIAL, national: '' });
         setData('new_customer', { name: '', whatsapp: '' });
     };
 
@@ -646,10 +657,10 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                                 </div>
                                 <div>
                                     <Label required>WhatsApp Number</Label>
-                                    <TextInput
-                                        value={data.new_customer.whatsapp}
-                                        onChange={(e) => setData('new_customer', { ...data.new_customer, whatsapp: e.target.value })}
-                                        placeholder="+919876543210"
+                                    <PhoneInput
+                                        dial={newPhone.dial}
+                                        number={newPhone.national}
+                                        onChange={handleNewPhoneChange}
                                         error={allErrors['new_customer.whatsapp']}
                                     />
                                 </div>

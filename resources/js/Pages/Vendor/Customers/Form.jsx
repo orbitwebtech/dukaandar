@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import VendorLayout from '@/Layouts/VendorLayout';
 import { useStorePath } from '@/lib/storePath';
@@ -5,6 +6,8 @@ import Label from '@/Components/Label';
 import TextInput from '@/Components/TextInput';
 import Button from '@/Components/Button';
 import SearchableSelect from '@/Components/SearchableSelect';
+import PhoneInput from '@/Components/PhoneInput';
+import { splitPhone, combinePhone } from '@/lib/countryCodes';
 
 const SIZE_OPTIONS = [
     { value: 'S', label: 'S' },
@@ -28,6 +31,17 @@ export default function CustomerForm({ customer = null }) {
         size_pref: customer?.size_pref || [],
         notes: customer?.notes || '',
     });
+
+    // Split the stored number into a country code + national number for editing.
+    const initialPhone = splitPhone(customer?.whatsapp);
+    const [dial, setDial] = useState(initialPhone.dial);
+    const [national, setNational] = useState(initialPhone.national);
+
+    const handlePhoneChange = (nextDial, nextNational) => {
+        setDial(nextDial);
+        setNational(nextNational);
+        setData('whatsapp', combinePhone(nextDial, nextNational));
+    };
 
     const selectedSizes = SIZE_OPTIONS.filter((o) => data.size_pref.includes(o.value));
 
@@ -68,12 +82,11 @@ export default function CustomerForm({ customer = null }) {
                         {/* WhatsApp */}
                         <div>
                             <Label htmlFor="whatsapp">WhatsApp Number</Label>
-                            <TextInput
+                            <PhoneInput
                                 id="whatsapp"
-                                type="text"
-                                value={data.whatsapp}
-                                onChange={(e) => setData('whatsapp', e.target.value)}
-                                placeholder="+91 98765 43210"
+                                dial={dial}
+                                number={national}
+                                onChange={handlePhoneChange}
                                 error={errors.whatsapp}
                             />
                         </div>
