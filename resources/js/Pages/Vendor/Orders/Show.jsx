@@ -32,6 +32,7 @@ export default function Show({ order, settings = {}, invoiceLink = '', activeCou
     const subtotal = Number(order.subtotal || 0);
     const discountAmount = Number(order.discount_amount || 0);
     const taxTotal = Number(order.tax_total || 0);
+    const shippingCost = Number(order.shipping_cost || 0);
     const pricesIncludeTax = !!order.prices_include_tax;
     const grandTotal = Number(order.total || 0);
 
@@ -469,6 +470,12 @@ export default function Show({ order, settings = {}, invoiceLink = '', activeCou
                                 <div className="flex justify-between text-sm text-gray-600">
                                     <span>GST {pricesIncludeTax ? '(included)' : ''}</span>
                                     <span className="font-medium text-gray-900">{pricesIncludeTax ? '' : '+ '}{formatCurrency(taxTotal)}</span>
+                                </div>
+                            )}
+                            {shippingCost > 0 && (
+                                <div className="flex justify-between text-sm text-gray-600">
+                                    <span>Shipping</span>
+                                    <span className="font-medium text-gray-900">+ {formatCurrency(shippingCost)}</span>
                                 </div>
                             )}
                             <div className="border-t border-gray-200 pt-2 flex justify-between">

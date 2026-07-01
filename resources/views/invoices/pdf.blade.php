@@ -121,6 +121,12 @@
             <td class="text-right">{{ $order->prices_include_tax ? '' : '+' }}₹{{ number_format($order->tax_total, 2) }}</td>
         </tr>
         @endif
+        @if($order->shipping_cost > 0)
+        <tr>
+            <td>Shipping</td>
+            <td class="text-right">+₹{{ number_format($order->shipping_cost, 2) }}</td>
+        </tr>
+        @endif
         <tr class="total-row">
             <td>Total</td>
             <td class="text-right">₹{{ number_format($order->total, 2) }}</td>

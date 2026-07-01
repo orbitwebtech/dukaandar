@@ -80,6 +80,7 @@ class OrderController extends Controller
             'items.*.line_discount_value' => 'nullable|numeric|min:0',
             'discount_type' => 'nullable|in:flat,percent',
             'discount_value' => 'nullable|numeric|min:0',
+            'shipping_cost' => 'nullable|numeric|min:0',
             'payment_method' => 'required|in:cash,upi,bank_transfer,card',
             'payment_status' => 'required|in:paid,pending,partial',
             'notes' => 'nullable|string',
@@ -162,9 +163,10 @@ class OrderController extends Controller
         $pricesIncludeTax = $store->getSetting('prices_include_tax') === '1';
         [$processedItems, $taxTotal] = $this->applyLineTaxes($processedItems, $pricesIncludeTax);
 
-        $total = $pricesIncludeTax
+        $shippingCost = round((float) ($validated['shipping_cost'] ?? 0), 2);
+        $total = ($pricesIncludeTax
             ? $subtotal - $orderDiscountAmount
-            : $subtotal + $taxTotal - $orderDiscountAmount;
+            : $subtotal + $taxTotal - $orderDiscountAmount) + $shippingCost;
 
         $order = $store->orders()->create([
             'order_number' => Order::generateOrderNumber($store->id),
@@ -176,6 +178,7 @@ class OrderController extends Controller
             'discount_amount' => round($orderDiscountAmount, 2),
             'tax_total' => $taxTotal,
             'prices_include_tax' => $pricesIncludeTax,
+            'shipping_cost' => $shippingCost,
             'total' => round(max(0, $total), 2),
             'payment_method' => $validated['payment_method'],
             'payment_status' => $validated['payment_status'],
@@ -311,6 +314,7 @@ class OrderController extends Controller
             'items.*.line_discount_value' => 'nullable|numeric|min:0',
             'discount_type' => 'nullable|in:flat,percent',
             'discount_value' => 'nullable|numeric|min:0',
+            'shipping_cost' => 'nullable|numeric|min:0',
             'payment_method' => 'required|in:cash,upi,bank_transfer,card',
             'payment_status' => 'required|in:paid,pending,partial',
             'status' => 'required|in:draft,confirmed,delivered,cancelled',
@@ -414,9 +418,10 @@ class OrderController extends Controller
         $pricesIncludeTax = $store->getSetting('prices_include_tax') === '1';
         [$processedItems, $taxTotal] = $this->applyLineTaxes($processedItems, $pricesIncludeTax);
 
-        $total = $pricesIncludeTax
+        $shippingCost = round((float) ($validated['shipping_cost'] ?? 0), 2);
+        $total = ($pricesIncludeTax
             ? $subtotal - $orderDiscountAmount
-            : $subtotal + $taxTotal - $orderDiscountAmount;
+            : $subtotal + $taxTotal - $orderDiscountAmount) + $shippingCost;
 
         // 5. Update order header
         $previousCustomerId = $order->customer_id;
@@ -429,6 +434,7 @@ class OrderController extends Controller
             'discount_amount' => round($orderDiscountAmount, 2),
             'tax_total' => $taxTotal,
             'prices_include_tax' => $pricesIncludeTax,
+            'shipping_cost' => $shippingCost,
             'total' => round(max(0, $total), 2),
             'payment_method' => $validated['payment_method'],
             'payment_status' => $validated['payment_status'],
@@ -550,6 +556,7 @@ class OrderController extends Controller
             'discount_amount' => $order->discount_amount,
             'tax_total' => $order->tax_total,
             'prices_include_tax' => $order->prices_include_tax,
+            'shipping_cost' => $order->shipping_cost,
             'total' => $order->total,
             'payment_method' => $order->payment_method,
             'payment_status' => 'pending',

@@ -11,7 +11,7 @@ class Order extends Model
     protected $fillable = [
         'store_id', 'order_number', 'customer_id', 'order_date',
         'subtotal', 'discount_type', 'discount_value', 'discount_amount',
-        'tax_total', 'prices_include_tax',
+        'tax_total', 'prices_include_tax', 'shipping_cost',
         'total', 'payment_method', 'payment_status', 'status',
         'notes', 'invoice_sent', 'coupon_code',
     ];
@@ -23,6 +23,7 @@ class Order extends Model
         'discount_amount' => 'decimal:2',
         'tax_total' => 'decimal:2',
         'prices_include_tax' => 'boolean',
+        'shipping_cost' => 'decimal:2',
         'total' => 'decimal:2',
         'invoice_sent' => 'boolean',
     ];

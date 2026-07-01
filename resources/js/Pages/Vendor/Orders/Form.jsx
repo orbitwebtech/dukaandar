@@ -246,6 +246,7 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
         items: buildInitialItems(),
         discount_type: order?.discount_type || 'flat',
         discount_value: order?.discount_value || 0,
+        shipping_cost: order?.shipping_cost || 0,
         payment_method: order?.payment_method || 'cash',
         payment_status: order?.payment_status || 'paid',
         coupon_code: order?.coupon_code || '',
@@ -465,9 +466,11 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
             ? subtotal * (Number(data.discount_value || 0) / 100)
             : 0;
 
-    const grandTotal = pricesIncludeTax
+    const shippingCost = Math.max(0, Number(data.shipping_cost || 0));
+
+    const grandTotal = (pricesIncludeTax
         ? Math.max(0, subtotal - orderDiscountAmount)
-        : Math.max(0, subtotal + taxTotal - orderDiscountAmount);
+        : Math.max(0, subtotal + taxTotal - orderDiscountAmount)) + shippingCost;
 
     // ---- Coupon validation ----
     const canCheckCoupon = !!data.coupon_code && !!data.customer_id && !showNewCustomer && subtotal > 0;
@@ -533,6 +536,7 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
             items: cleanedItems,
             discount_type: data.discount_value > 0 ? data.discount_type : null,
             discount_value: parseFloat(data.discount_value) || 0,
+            shipping_cost: parseFloat(data.shipping_cost) || 0,
             payment_method: data.payment_method,
             payment_status: data.payment_status,
             notes: data.notes || null,
@@ -775,6 +779,20 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                                 </div>
                             </div>
 
+                            <div>
+                                <Label>Shipping Cost (₹)</Label>
+                                <TextInput
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={data.shipping_cost}
+                                    onChange={(e) => setData('shipping_cost', e.target.value)}
+                                    placeholder="0.00"
+                                    error={allErrors.shipping_cost}
+                                />
+                                <p className="mt-1 text-xs text-gray-400">Added to the grand total.</p>
+                            </div>
+
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                 <div>
                                     <Label>Order Status</Label>
@@ -891,6 +909,13 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                                     <div className="flex justify-between text-sm text-gray-600">
                                         <span>GST {pricesIncludeTax ? '(included)' : ''}</span>
                                         <span className="font-medium text-gray-900">{pricesIncludeTax ? '' : '+ '}{formatCurrency(taxTotal)}</span>
+                                    </div>
+                                )}
+
+                                {shippingCost > 0 && (
+                                    <div className="flex justify-between text-sm text-gray-600">
+                                        <span>Shipping</span>
+                                        <span className="font-medium text-gray-900">+ {formatCurrency(shippingCost)}</span>
                                     </div>
                                 )}
 
