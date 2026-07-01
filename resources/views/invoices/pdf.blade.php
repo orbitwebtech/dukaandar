@@ -1,3 +1,4 @@
+@php $primaryColor = \App\Support\ThemePalette::normalize($settings['primary_color'] ?? null); @endphp
 <!DOCTYPE html>
 <html>
 <head>
@@ -5,12 +6,12 @@
     <title>Invoice {{ $order->order_number }}</title>
     <style>
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 14px; color: #333; margin: 0; padding: 40px; }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 3px solid #4338ca; padding-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 3px solid {{ $primaryColor }}; padding-bottom: 20px; }
         .header-left { display: flex; align-items: flex-start; gap: 16px; }
         .shop-logo { max-height: 70px; max-width: 120px; object-fit: contain; }
-        .shop-name { font-size: 24px; font-weight: bold; color: #4338ca; }
+        .shop-name { font-size: 24px; font-weight: bold; color: {{ $primaryColor }}; }
         .shop-info { font-size: 12px; color: #666; margin-top: 4px; }
-        .invoice-title { font-size: 28px; font-weight: bold; color: #4338ca; text-align: right; }
+        .invoice-title { font-size: 28px; font-weight: bold; color: {{ $primaryColor }}; text-align: right; }
         .invoice-meta { text-align: right; font-size: 12px; color: #666; margin-top: 4px; }
         .customer-section { margin-bottom: 30px; }
         .section-title { font-size: 12px; font-weight: bold; color: #999; text-transform: uppercase; margin-bottom: 8px; }

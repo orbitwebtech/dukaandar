@@ -8,6 +8,7 @@
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+    <style id="app-theme">{!! $themeRootCss ?? '' !!}</style>
     @inertiaHead
 </head>
 <body class="font-sans antialiased bg-gray-50">

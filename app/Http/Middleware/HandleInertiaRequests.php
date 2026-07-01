@@ -60,6 +60,7 @@ class HandleInertiaRequests extends Middleware
                         'slug' => $store->slug,
                         'name' => $store->name,
                         'role' => $user?->roleIn($store),
+                        'primary_color' => \App\Support\ThemePalette::normalize($store->getSetting('primary_color')),
                         'permissions' => $isOwner
                             ? \App\Support\Permissions::all()
                             : ($user?->membershipFor($store)?->permissions ?? []),

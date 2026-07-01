@@ -34,11 +34,13 @@ class SettingController extends Controller
             'gst_number', 'prices_include_tax', 'google_review_link', 'instagram_handle',
             'invoice_prefix', 'invoice_footer', 'whatsapp_template', 'show_cost_price',
             'review_text', 'review_reprompt_interval',
-            'slow_moving_days',
+            'slow_moving_days', 'primary_color',
         ];
 
         foreach ($request->only($allowed) as $key => $value) {
-            if (is_array($value)) {
+            if ($key === 'primary_color') {
+                $value = \App\Support\ThemePalette::normalize($value);
+            } elseif (is_array($value)) {
                 $value = json_encode($value);
             } elseif (is_bool($value)) {
                 $value = $value ? '1' : '0';

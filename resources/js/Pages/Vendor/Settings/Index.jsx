@@ -6,13 +6,28 @@ import Card, { CardHeader } from '@/Components/Card';
 import Label from '@/Components/Label';
 import TextInput from '@/Components/TextInput';
 import Button from '@/Components/Button';
+import { applyTheme, normalizeHex, DEFAULT_PRIMARY } from '@/lib/theme';
 
 const TABS = [
     { id: 'shop', label: 'Shop Profile' },
     { id: 'invoice', label: 'Invoice' },
+    { id: 'appearance', label: 'Appearance' },
     { id: 'review', label: 'Review' },
     { id: 'inventory', label: 'Inventory' },
 ];
+
+const COLOR_PRESETS = [
+    { name: 'Indigo', hex: '#4338ca' },
+    { name: 'Blue', hex: '#2563eb' },
+    { name: 'Emerald', hex: '#059669' },
+    { name: 'Rose', hex: '#e11d48' },
+    { name: 'Amber', hex: '#d97706' },
+    { name: 'Violet', hex: '#7c3aed' },
+    { name: 'Teal', hex: '#0d9488' },
+    { name: 'Slate', hex: '#475569' },
+];
+
+const isValidHex = (v) => /^#?[0-9a-fA-F]{6}$/.test(String(v || '').trim());
 
 function Field({ label, children, required }) {
     return (
@@ -44,7 +59,14 @@ export default function Settings({ settings = {}, tenant = {} }) {
         review_text: settings.review_text || '',
         review_reprompt_interval: settings.review_reprompt_interval || '',
         slow_moving_days: settings.slow_moving_days || '',
+        primary_color: settings.primary_color || DEFAULT_PRIMARY,
     });
+
+    // Live-preview the brand colour as the user picks it (reverts on navigate if unsaved).
+    function handleColorChange(hex) {
+        setData('primary_color', hex);
+        if (isValidHex(hex)) applyTheme(hex);
+    }
 
     // Logo upload — using router.post directly for reliable file upload
     const logoInputRef = useRef(null);
@@ -319,6 +341,76 @@ export default function Settings({ settings = {}, tenant = {} }) {
                                     />
                                 </button>
                                 <Label className="mb-0">Show Cost Price on Invoices</Label>
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
+                {/* Appearance Tab */}
+                {activeTab === 'appearance' && (
+                    <Card>
+                        <CardHeader
+                            title="Brand Colour"
+                            subtitle="Sets the primary colour across the whole app and your invoice PDFs."
+                        />
+                        <div className="space-y-6 max-w-xl">
+                            <Field label="Primary Colour">
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="color"
+                                        value={isValidHex(data.primary_color) ? normalizeHex(data.primary_color) : DEFAULT_PRIMARY}
+                                        onChange={(e) => handleColorChange(e.target.value)}
+                                        className="h-11 w-14 cursor-pointer rounded-lg border border-gray-300 bg-white p-1"
+                                        aria-label="Pick primary colour"
+                                    />
+                                    <div className="w-40">
+                                        <TextInput
+                                            value={data.primary_color}
+                                            onChange={(e) => handleColorChange(e.target.value)}
+                                            placeholder="#4338ca"
+                                            className="font-mono uppercase"
+                                            error={errors.primary_color}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleColorChange(DEFAULT_PRIMARY)}
+                                        className="text-sm text-gray-500 hover:text-gray-700 underline"
+                                    >
+                                        Reset to default
+                                    </button>
+                                </div>
+                                <p className="mt-2 text-xs text-gray-500">
+                                    Lighter and darker shades are generated automatically. Changes preview instantly — click Save to keep them.
+                                </p>
+                            </Field>
+
+                            <Field label="Presets">
+                                <div className="flex flex-wrap gap-2">
+                                    {COLOR_PRESETS.map((preset) => {
+                                        const active = normalizeHex(data.primary_color) === normalizeHex(preset.hex);
+                                        return (
+                                            <button
+                                                key={preset.hex}
+                                                type="button"
+                                                title={preset.name}
+                                                onClick={() => handleColorChange(preset.hex)}
+                                                className={`h-9 w-9 rounded-full border-2 transition ${active ? 'border-gray-900 ring-2 ring-offset-2 ring-gray-300' : 'border-white shadow'}`}
+                                                style={{ backgroundColor: preset.hex }}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </Field>
+
+                            <div>
+                                <Label>Preview</Label>
+                                <div className="mt-1 flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 p-4">
+                                    <Button type="button">Primary Button</Button>
+                                    <Button type="button" variant="outline">Outline</Button>
+                                    <span className="rounded-full bg-primary-50 px-3 py-1 text-sm font-medium text-primary-700">Badge</span>
+                                    <a href="#" onClick={(e) => e.preventDefault()} className="text-sm font-medium text-primary-600">Link colour</a>
+                                </div>
                             </div>
                         </div>
                     </Card>
