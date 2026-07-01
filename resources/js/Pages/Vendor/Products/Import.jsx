@@ -137,6 +137,7 @@ export default function ProductsImport() {
                             <p className="text-xs text-gray-600">
                                 <code className="bg-gray-100 px-1 rounded">variant_attributes</code> e.g. <code className="bg-gray-100 px-1 rounded">Color:Red|Size:M</code> ·{' '}
                                 <code className="bg-gray-100 px-1 rounded">variant_sku</code> ·{' '}
+                                <code className="bg-gray-100 px-1 rounded">variant_cost</code> ·{' '}
                                 <code className="bg-gray-100 px-1 rounded">variant_price</code> ·{' '}
                                 <code className="bg-gray-100 px-1 rounded">variant_stock</code> ·{' '}
                                 <code className="bg-gray-100 px-1 rounded">variant_low_stock_threshold</code>

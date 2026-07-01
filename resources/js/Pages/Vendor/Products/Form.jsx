@@ -1,5 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 import VendorLayout from '@/Layouts/VendorLayout';
 import { useStorePath } from '@/lib/storePath';
 import Card, { CardHeader } from '@/Components/Card';
@@ -8,7 +8,7 @@ import Label from '@/Components/Label';
 import TextInput from '@/Components/TextInput';
 import SearchableSelect from '@/Components/SearchableSelect';
 
-function VariantRow({ variant, index, onChange, onRemove }) {
+function VariantRow({ variant, index, onChange, onRemove, onDuplicate }) {
     function updateField(field, value) {
         onChange(index, { ...variant, [field]: value });
     }
@@ -37,14 +37,24 @@ function VariantRow({ variant, index, onChange, onRemove }) {
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
             <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">Variant {index + 1}</span>
-                <button
-                    type="button"
-                    onClick={() => onRemove(index)}
-                    className="text-red-400 hover:text-red-600 transition"
-                    title="Remove variant"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => onDuplicate(index)}
+                        className="text-gray-400 hover:text-primary-600 transition"
+                        title="Duplicate variant"
+                    >
+                        <Copy className="h-4 w-4" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => onRemove(index)}
+                        className="text-red-400 hover:text-red-600 transition"
+                        title="Remove variant"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </button>
+                </div>
             </div>
 
             {/* Attributes */}
@@ -231,6 +241,19 @@ export default function Form({ product, categories = [] }) {
     function removeVariant(index) {
         const variants = [...data.variants];
         variants.splice(index, 1);
+        setData('variants', variants);
+    }
+
+    function duplicateVariant(index) {
+        const source = data.variants[index];
+        const copy = {
+            ...source,
+            id: undefined, // save as a new variant, not an edit of the original
+            is_default: false, // avoid two defaults; user can re-check if needed
+            attributes: (source.attributes || []).map((attr) => ({ ...attr })),
+        };
+        const variants = [...data.variants];
+        variants.splice(index + 1, 0, copy);
         setData('variants', variants);
     }
 
@@ -434,6 +457,7 @@ export default function Form({ product, categories = [] }) {
                                         index={i}
                                         onChange={updateVariant}
                                         onRemove={removeVariant}
+                                        onDuplicate={duplicateVariant}
                                     />
                                 ))}
                             </div>

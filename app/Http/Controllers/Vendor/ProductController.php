@@ -368,15 +368,15 @@ class ProductController extends Controller
         $headers = [
             'type', 'name', 'sku', 'barcode', 'category', 'description',
             'cost_price', 'selling_price', 'stock_qty', 'low_stock_threshold', 'status',
-            'variant_attributes', 'variant_sku', 'variant_barcode', 'variant_price', 'variant_stock', 'variant_low_stock_threshold',
+            'variant_attributes', 'variant_sku', 'variant_barcode', 'variant_cost', 'variant_price', 'variant_stock', 'variant_low_stock_threshold',
         ];
 
         $rows = [
-            ['simple', 'Cotton Kurta White', 'KURTA-001', '8901234567890', 'Kurta', 'Soft cotton kurta', '350', '599', '45', '10', 'active', '', '', '', '', '', ''],
-            ['simple', 'Silk Dupatta Red', 'DUP-002', '', 'Dupatta', '', '200', '399', '30', '5', 'active', '', '', '', '', '', ''],
-            ['variable', 'Designer Lehenga', 'LEH-001', '', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Red|Size:M', 'LEH-001-R-M', '8901111000010', '2499', '5', '2'],
-            ['variable', 'Designer Lehenga', 'LEH-001', '', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Red|Size:L', 'LEH-001-R-L', '8901111000011', '2699', '3', '2'],
-            ['variable', 'Designer Lehenga', 'LEH-001', '', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Blue|Size:M', 'LEH-001-B-M', '8901111000012', '2499', '4', '2'],
+            ['simple', 'Cotton Kurta White', 'KURTA-001', '8901234567890', 'Kurta', 'Soft cotton kurta', '350', '599', '45', '10', 'active', '', '', '', '', '', '', ''],
+            ['simple', 'Silk Dupatta Red', 'DUP-002', '', 'Dupatta', '', '200', '399', '30', '5', 'active', '', '', '', '', '', '', ''],
+            ['variable', 'Designer Lehenga', 'LEH-001', '', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Red|Size:M', 'LEH-001-R-M', '8901111000010', '1500', '2499', '5', '2'],
+            ['variable', 'Designer Lehenga', 'LEH-001', '', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Red|Size:L', 'LEH-001-R-L', '8901111000011', '1600', '2699', '3', '2'],
+            ['variable', 'Designer Lehenga', 'LEH-001', '', 'Lehenga', 'Embroidered designer lehenga', '1500', '', '', '', 'active', 'Color:Blue|Size:M', 'LEH-001-B-M', '8901111000012', '1500', '2499', '4', '2'],
         ];
 
         return response()->streamDownload(function () use ($headers, $rows) {
@@ -532,6 +532,7 @@ class ProductController extends Controller
                         'sku' => $r['variant_sku'] ?: ($sku . '-' . ($i + 1)),
                         'barcode' => !empty($r['variant_barcode']) ? $r['variant_barcode'] : null,
                         'attributes' => $attrs,
+                        'cost_price' => ($r['variant_cost'] ?? '') !== '' ? (float) $r['variant_cost'] : null,
                         'price' => (float) $r['variant_price'],
                         'stock_qty' => $vStock,
                         'low_stock_threshold' => $r['variant_low_stock_threshold'] !== '' ? (int) $r['variant_low_stock_threshold'] : null,
