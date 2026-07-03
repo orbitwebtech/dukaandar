@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Org;
 
 use App\Http\Controllers\Controller;
-use App\Models\Invitation;
-use App\Models\Store;
 use App\Models\StoreUser;
 use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 
 class TeamController extends Controller
@@ -35,17 +34,11 @@ class TeamController extends Controller
                     'slug' => $s->slug,
                     'name' => $s->name,
                     'role' => $s->pivot->role,
+                    'permissions' => $s->pivot->permissions,
                 ]),
             ]);
 
         $owner = $org->owner;
-
-        $pendingInvitations = $org->invitations()
-            ->whereNull('accepted_at')
-            ->where('expires_at', '>', now())
-            ->with('stores:id,name,slug')
-            ->orderBy('created_at', 'desc')
-            ->get();
 
         return Inertia::render('Org/Team/Index', [
             'owner' => $owner ? [
@@ -54,55 +47,57 @@ class TeamController extends Controller
                 'email' => $owner->email,
             ] : null,
             'members' => $members,
-            'invitations' => $pendingInvitations,
             'stores' => $org->stores()->where('status', 'active')->get(['id', 'slug', 'name']),
             'permissionsCatalog' => Permissions::grouped(),
             'roleDefaults' => [
                 'manager' => Permissions::defaultsFor('manager'),
                 'employee' => Permissions::defaultsFor('employee'),
+                'sales' => Permissions::defaultsFor('sales'),
             ],
         ]);
     }
 
-    public function invite(Request $request)
+    public function storeMember(Request $request)
     {
         $org = $request->user()->organization;
         abort_unless($org, 403);
 
         $validated = $request->validate([
-            'email' => 'required|email',
-            'role' => ['required', Rule::in(['manager', 'employee'])],
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => ['required', 'confirmed', Password::min(8)],
+            'role' => ['required', Rule::in(['manager', 'employee', 'sales'])],
             'store_ids' => 'required|array|min:1',
             'store_ids.*' => ['integer', Rule::exists('stores', 'id')->where('organization_id', $org->id)],
             'permissions' => 'nullable|array',
-            'permissions.*' => ['string', Rule::in(Permissions::all())],
+            'permissions.*' => ['string'],
         ]);
 
-        $existingUser = User::where('email', $validated['email'])
-            ->where('organization_id', $org->id)
-            ->first();
+        $permissions = $validated['permissions'] ?? Permissions::defaultsFor($validated['role']);
+        $permissions = array_values(array_intersect($permissions, Permissions::all()));
 
-        if ($existingUser) {
-            return back()->withErrors(['email' => 'A user with this email already exists in your organization.']);
-        }
-
-        $invitation = DB::transaction(function () use ($validated, $org, $request) {
-            $inv = Invitation::create([
+        DB::transaction(function () use ($validated, $org, $permissions) {
+            $user = User::create([
                 'organization_id' => $org->id,
+                'system_role' => 'member',
+                'name' => $validated['name'],
                 'email' => $validated['email'],
-                'role' => $validated['role'],
-                'permissions' => $validated['permissions'] ?? Permissions::defaultsFor($validated['role']),
-                'invited_by' => $request->user()->id,
-                'token' => Invitation::generateToken(),
-                'expires_at' => now()->addDays(7),
+                'password' => $validated['password'],
+                // Owner-created accounts are trusted immediately — no verification email.
+                'email_verified_at' => now(),
             ]);
 
-            $inv->stores()->attach($validated['store_ids']);
-
-            return $inv;
+            foreach ($validated['store_ids'] as $storeId) {
+                StoreUser::create([
+                    'store_id' => $storeId,
+                    'user_id' => $user->id,
+                    'role' => $validated['role'],
+                    'permissions' => $permissions,
+                ]);
+            }
         });
 
-        return back()->with('success', "Invitation sent. Share this link: " . url("/invitations/{$invitation->token}"));
+        return back()->with('success', "{$validated['name']} added to your team.");
     }
 
     public function updateMember(Request $request, User $member)
@@ -114,9 +109,9 @@ class TeamController extends Controller
         $validated = $request->validate([
             'memberships' => 'required|array',
             'memberships.*.store_id' => ['required', 'integer', Rule::exists('stores', 'id')->where('organization_id', $org->id)],
-            'memberships.*.role' => ['required', Rule::in(['manager', 'employee'])],
+            'memberships.*.role' => ['required', Rule::in(['manager', 'employee', 'sales'])],
             'memberships.*.permissions' => 'nullable|array',
-            'memberships.*.permissions.*' => ['string', Rule::in(Permissions::all())],
+            'memberships.*.permissions.*' => ['string'],
         ]);
 
         DB::transaction(function () use ($validated, $member) {
@@ -124,11 +119,16 @@ class TeamController extends Controller
             StoreUser::where('user_id', $member->id)->whereNotIn('store_id', $keepStoreIds)->delete();
 
             foreach ($validated['memberships'] as $m) {
+                $permissions = $m['permissions'] ?? Permissions::defaultsFor($m['role']);
+                // Drop any stale permissions no longer in the catalog (e.g. removed features)
+                // so legacy data can't fail the whole save.
+                $permissions = array_values(array_intersect($permissions, Permissions::all()));
+
                 StoreUser::updateOrCreate(
                     ['store_id' => $m['store_id'], 'user_id' => $member->id],
                     [
                         'role' => $m['role'],
-                        'permissions' => $m['permissions'] ?? Permissions::defaultsFor($m['role']),
+                        'permissions' => $permissions,
                     ]
                 );
             }
@@ -146,15 +146,5 @@ class TeamController extends Controller
         $member->delete();
 
         return back()->with('success', 'Member removed.');
-    }
-
-    public function revokeInvitation(Request $request, Invitation $invitation)
-    {
-        $org = $request->user()->organization;
-        abort_unless($org && $invitation->organization_id === $org->id, 403);
-
-        $invitation->delete();
-
-        return back()->with('success', 'Invitation revoked.');
     }
 }

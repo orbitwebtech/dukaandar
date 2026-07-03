@@ -25,6 +25,7 @@ export default function VendorLayout({ children, title }) {
         { name: 'Purchases', href: url('/purchases'), icon: ShoppingBag, show: can('purchases.read') },
         { name: 'Inventory Reports', href: url('/reports/inventory'), icon: BarChart3, show: can('reports.read') },
         { name: 'Sales Reports', href: url('/reports/sales'), icon: TrendingUp, show: can('reports.read') },
+        { name: 'Salesperson Report', href: url('/reports/sales-persons'), icon: UserCog, show: can('reports.read') },
         { name: 'Profit & Loss', href: url('/reports/profit-loss'), icon: Wallet, show: can('reports.read') },
         { name: 'Coupons', href: url('/coupons'), icon: Tag, show: can('coupons.read') },
         { name: 'Settings', href: url('/settings'), icon: Settings, show: can('settings.read') },
@@ -37,24 +38,24 @@ export default function VendorLayout({ children, title }) {
     ].filter(i => i.show);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-brand-gradient-soft">
             {sidebarOpen && (
                 <div className="fixed inset-0 z-40 lg:hidden">
-                    <div className="fixed inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-                    <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl">
+                    <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+                    <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl">
                         <SidebarContent navigation={navigation} orgNav={orgNav} currentPath={currentPath} onClose={() => setSidebarOpen(false)} auth={auth} />
                     </div>
                 </div>
             )}
 
             <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-64 lg:flex-col">
-                <div className="flex grow flex-col bg-white border-r border-gray-200">
+                <div className="flex grow flex-col bg-white border-r border-gray-200/80">
                     <SidebarContent navigation={navigation} orgNav={orgNav} currentPath={currentPath} auth={auth} />
                 </div>
             </div>
 
             <div className="lg:pl-64">
-                <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-200">
+                <header className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b border-gray-200/70">
                     <div className="flex items-center justify-between px-4 py-3 sm:px-6">
                         <div className="flex items-center gap-3">
                             <button
@@ -63,7 +64,7 @@ export default function VendorLayout({ children, title }) {
                             >
                                 <Menu className="h-5 w-5" />
                             </button>
-                            <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+                            <h1 className="text-xl font-bold tracking-tight text-gray-900">{title}</h1>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -101,7 +102,7 @@ export default function VendorLayout({ children, title }) {
                                     onClick={() => setProfileOpen(!profileOpen)}
                                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-gray-100 transition"
                                 >
-                                    <div className="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium text-sm">
+                                    <div className="h-8 w-8 rounded-full bg-brand-gradient shadow-brand flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white">
                                         {auth?.user?.name?.charAt(0)?.toUpperCase() || 'V'}
                                     </div>
                                     <span className="hidden sm:block font-medium text-gray-700">{auth?.user?.name}</span>
@@ -166,12 +167,12 @@ function SidebarContent({ navigation, orgNav, currentPath, onClose, auth }) {
     return (
         <div className="flex h-full flex-col">
             <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
-                <Link href={auth?.currentStore ? `/store/${auth.currentStore.slug}/dashboard` : '/'} className="flex items-center gap-2.5">
-                    <div className="h-9 w-9 rounded-lg bg-primary-500 flex items-center justify-center">
+                <Link href={auth?.currentStore ? `/store/${auth.currentStore.slug}/dashboard` : '/'} className="flex items-center gap-2.5 group">
+                    <div className="h-9 w-9 rounded-xl bg-brand-gradient shadow-brand flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
                         <Store className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                        <span className="text-lg font-bold text-primary-700">Dukaandar</span>
+                        <span className="text-lg font-bold text-brand-gradient">Dukaandar</span>
                         <p className="text-[10px] text-gray-400 -mt-0.5 font-medium tracking-wider uppercase">CRM</p>
                     </div>
                 </Link>
@@ -199,13 +200,13 @@ function SidebarContent({ navigation, orgNav, currentPath, onClose, auth }) {
                             key={item.name}
                             href={item.href}
                             onClick={onClose}
-                            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                                 isActive
-                                    ? 'bg-primary-50 text-primary-700'
-                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    ? 'bg-brand-gradient text-white shadow-brand'
+                                    : 'text-gray-600 hover:bg-primary-50/60 hover:text-primary-700'
                             }`}
                         >
-                            <item.icon className={`h-5 w-5 ${isActive ? 'text-primary-500' : 'text-gray-400'}`} />
+                            <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-primary-500'}`} />
                             {item.name}
                         </Link>
                     );
@@ -221,11 +222,11 @@ function SidebarContent({ navigation, orgNav, currentPath, onClose, auth }) {
                                     key={item.name}
                                     href={item.href}
                                     onClick={onClose}
-                                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                                        isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                                        isActive ? 'bg-brand-gradient text-white shadow-brand' : 'text-gray-600 hover:bg-primary-50/60 hover:text-primary-700'
                                     }`}
                                 >
-                                    <item.icon className={`h-5 w-5 ${isActive ? 'text-primary-500' : 'text-gray-400'}`} />
+                                    <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-400'}`} />
                                     {item.name}
                                 </Link>
                             );

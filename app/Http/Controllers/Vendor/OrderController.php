@@ -12,10 +12,54 @@ use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Services\CouponService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class OrderController extends Controller
 {
+    /**
+     * People an order may be attributed to: the organization owner plus any
+     * store members with the "sales" role. Returned owner-first, then A–Z.
+     */
+    private function salesPeople(Store $store)
+    {
+        $owner = $store->organization->owner;
+
+        $people = collect();
+        if ($owner) {
+            $people->push(['id' => $owner->id, 'name' => $owner->name, 'is_owner' => true]);
+        }
+
+        $store->users()
+            ->wherePivot('role', 'sales')
+            ->orderBy('name')
+            ->get(['users.id', 'users.name'])
+            ->each(function ($u) use ($people, $owner) {
+                if (!$owner || $u->id !== $owner->id) {
+                    $people->push(['id' => $u->id, 'name' => $u->name, 'is_owner' => false]);
+                }
+            });
+
+        return $people->values();
+    }
+
+    /**
+     * Who to pre-select: the current user if they're assignable, otherwise the
+     * first salesperson, otherwise the owner (per "no salesperson → owner").
+     */
+    private function defaultSalesUserId($people, ?int $currentUserId): ?int
+    {
+        if ($currentUserId && $people->contains('id', $currentUserId)) {
+            return $currentUserId;
+        }
+
+        $firstSales = $people->firstWhere('is_owner', false);
+        if ($firstSales) {
+            return $firstSales['id'];
+        }
+
+        return $people->firstWhere('is_owner', true)['id'] ?? null;
+    }
     public function index(Request $request, Store $store)
     {
         $query = $store->orders()->with('customer:id,name,whatsapp');
@@ -40,10 +84,12 @@ class OrderController extends Controller
         ]);
     }
 
-    public function create(Store $store)
+    public function create(Request $request, Store $store)
     {
         $customers = $store->customers()->orderBy('name')->get(['id', 'name', 'whatsapp']);
         $products = $store->products()->where('status', 'active')->with('variants')->get();
+
+        $salesPeople = $this->salesPeople($store);
 
         $settings = [
             'invoice_prefix' => $store->getSetting('invoice_prefix', 'ORD'),
@@ -60,6 +106,8 @@ class OrderController extends Controller
             'products' => $products,
             'nextOrderNumber' => Order::generateOrderNumber($store->id),
             'settings' => $settings,
+            'salesPeople' => $salesPeople,
+            'defaultSalesUserId' => $this->defaultSalesUserId($salesPeople, $request->user()?->id),
         ]);
     }
 
@@ -70,6 +118,7 @@ class OrderController extends Controller
             'new_customer' => 'nullable|array',
             'new_customer.name' => 'required_without:customer_id|string|max:255',
             'new_customer.whatsapp' => 'required_without:customer_id|string|max:20',
+            'sales_user_id' => ['required', Rule::in($this->salesPeople($store)->pluck('id')->all())],
             'order_date' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -86,6 +135,9 @@ class OrderController extends Controller
             'notes' => 'nullable|string',
             'coupon_code' => 'nullable|string',
             'status' => 'nullable|in:draft,confirmed,delivered,cancelled',
+        ], [
+            'sales_user_id.required' => 'Please select a salesperson for this order.',
+            'sales_user_id.in' => 'The selected salesperson is not valid for this store.',
         ]);
 
         // Stock check (skip if cancelled — those don't reserve stock)
@@ -171,6 +223,7 @@ class OrderController extends Controller
         $order = $store->orders()->create([
             'order_number' => Order::generateOrderNumber($store->id),
             'customer_id' => $customerId,
+            'sales_user_id' => $validated['sales_user_id'],
             'order_date' => $validated['order_date'],
             'subtotal' => round($subtotal, 2),
             'discount_type' => $discountType,
@@ -237,6 +290,7 @@ class OrderController extends Controller
     {
         $order->load([
             'customer',
+            'salesPerson:id,name',
             'items.product:id,name,sku,type',
             'items.variant',
         ]);
@@ -279,12 +333,14 @@ class OrderController extends Controller
         ]);
     }
 
-    public function edit(Store $store, Order $order)
+    public function edit(Request $request, Store $store, Order $order)
     {
         $order->load('items.product', 'items.variant', 'customer');
 
         $customers = $store->customers()->orderBy('name')->get(['id', 'name', 'whatsapp']);
         $products = $store->products()->where('status', 'active')->with('variants')->get();
+
+        $salesPeople = $this->salesPeople($store);
 
         return Inertia::render('Vendor/Orders/Form', [
             'order' => $order,
@@ -294,6 +350,8 @@ class OrderController extends Controller
             'settings' => [
                 'prices_include_tax' => $store->getSetting('prices_include_tax') === '1',
             ],
+            'salesPeople' => $salesPeople,
+            'defaultSalesUserId' => $this->defaultSalesUserId($salesPeople, $request->user()?->id),
         ]);
     }
 
@@ -304,6 +362,7 @@ class OrderController extends Controller
             'new_customer' => 'nullable|array',
             'new_customer.name' => 'required_without:customer_id|string|max:255',
             'new_customer.whatsapp' => 'required_without:customer_id|string|max:20',
+            'sales_user_id' => ['required', Rule::in($this->salesPeople($store)->pluck('id')->all())],
             'order_date' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
@@ -320,6 +379,9 @@ class OrderController extends Controller
             'status' => 'required|in:draft,confirmed,delivered,cancelled',
             'notes' => 'nullable|string',
             'coupon_code' => 'nullable|string',
+        ], [
+            'sales_user_id.required' => 'Please select a salesperson for this order.',
+            'sales_user_id.in' => 'The selected salesperson is not valid for this store.',
         ]);
 
         $oldStatus = $order->status;
@@ -427,6 +489,7 @@ class OrderController extends Controller
         $previousCustomerId = $order->customer_id;
         $order->update([
             'customer_id' => $customerId,
+            'sales_user_id' => $validated['sales_user_id'],
             'order_date' => $validated['order_date'],
             'subtotal' => round($subtotal, 2),
             'discount_type' => $discountType,

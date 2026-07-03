@@ -19,34 +19,34 @@ export default function AdminLayout({ children, title }) {
     const currentPath = window.location.pathname;
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gradient-to-br from-red-50/40 via-white to-gray-50">
             {sidebarOpen && (
                 <div className="fixed inset-0 z-40 lg:hidden">
-                    <div className="fixed inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-                    <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl">
+                    <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+                    <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl">
                         <SidebarContent currentPath={currentPath} onClose={() => setSidebarOpen(false)} />
                     </div>
                 </div>
             )}
 
             <div className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-64 lg:flex-col">
-                <div className="flex grow flex-col bg-white border-r border-gray-200">
+                <div className="flex grow flex-col bg-white border-r border-gray-200/80">
                     <SidebarContent currentPath={currentPath} />
                 </div>
             </div>
 
             <div className="lg:pl-64">
-                <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-200">
+                <header className="sticky top-0 z-20 bg-white/70 backdrop-blur-xl border-b border-gray-200/70">
                     <div className="flex items-center justify-between px-4 py-3 sm:px-6">
                         <div className="flex items-center gap-3">
                             <button onClick={() => setSidebarOpen(true)} className="lg:hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100">
                                 <Menu className="h-5 w-5" />
                             </button>
-                            <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+                            <h1 className="text-xl font-bold tracking-tight text-gray-900">{title}</h1>
                         </div>
                         <div className="relative">
                             <button onClick={() => setProfileOpen(!profileOpen)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-gray-100 transition">
-                                <div className="h-8 w-8 rounded-full bg-red-600 flex items-center justify-center text-white font-medium text-sm">
+                                <div className="h-8 w-8 rounded-full bg-admin-gradient shadow-sm shadow-red-500/40 ring-2 ring-white flex items-center justify-center text-white font-medium text-sm">
                                     <Shield className="h-4 w-4" />
                                 </div>
                                 <span className="hidden sm:block font-medium text-gray-700">Super Admin</span>
@@ -92,13 +92,13 @@ function SidebarContent({ currentPath, onClose }) {
     return (
         <div className="flex h-full flex-col">
             <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
-                <Link href="/admin/dashboard" className="flex items-center gap-2.5">
-                    <div className="h-9 w-9 rounded-lg bg-red-600 flex items-center justify-center">
+                <Link href="/admin/dashboard" className="flex items-center gap-2.5 group">
+                    <div className="h-9 w-9 rounded-xl bg-admin-gradient shadow-sm shadow-red-500/40 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
                         <Shield className="h-5 w-5 text-white" />
                     </div>
                     <div>
                         <span className="text-lg font-bold text-gray-900">Dukaandar</span>
-                        <p className="text-[10px] text-red-500 -mt-0.5 font-medium tracking-wider uppercase">Super Admin</p>
+                        <p className="text-[10px] text-admin-gradient -mt-0.5 font-semibold tracking-wider uppercase">Super Admin</p>
                     </div>
                 </Link>
                 {onClose && (
@@ -116,11 +116,11 @@ function SidebarContent({ currentPath, onClose }) {
                             key={item.name}
                             href={item.href}
                             onClick={onClose}
-                            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                                isActive ? 'bg-red-50 text-red-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                                isActive ? 'bg-admin-gradient text-white shadow-sm shadow-red-500/40' : 'text-gray-600 hover:bg-red-50/60 hover:text-red-700'
                             }`}
                         >
-                            <item.icon className={`h-5 w-5 ${isActive ? 'text-red-500' : 'text-gray-400'}`} />
+                            <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-400'}`} />
                             {item.name}
                         </Link>
                     );

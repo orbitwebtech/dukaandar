@@ -220,7 +220,7 @@ function ItemRow({ item, idx, products, productOptions, allItems, allErrors, upd
     );
 }
 
-export default function Form({ customers = [], products = [], nextOrderNumber, settings, order }) {
+export default function Form({ customers = [], products = [], nextOrderNumber, settings, order, salesPeople = [], defaultSalesUserId = null }) {
     const url = useStorePath();
     const isEdit = Boolean(order);
 
@@ -241,6 +241,7 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
 
     const { data, setData, post, put, processing, errors } = useForm({
         customer_id: order?.customer_id || null,
+        sales_user_id: order?.sales_user_id ?? defaultSalesUserId ?? '',
         new_customer: { name: '', whatsapp: '' },
         order_date: order?.order_date
             ? new Date(order.order_date).toISOString().split('T')[0]
@@ -542,6 +543,7 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
 
         const payload = {
             customer_id: showNewCustomer ? null : data.customer_id,
+            sales_user_id: data.sales_user_id,
             new_customer: showNewCustomer ? data.new_customer : undefined,
             order_date: data.order_date,
             items: cleanedItems,
@@ -589,7 +591,12 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
         <VendorLayout title={isEdit ? 'Edit Order' : 'New Order'}>
             <Head title={isEdit ? 'Edit Order' : 'New Order'} />
 
-            <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
+            <form onSubmit={handleSubmit} className="space-y-6 max-w-6xl">
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
+
+                {/* ── Left column: Steps 1 & 2 ── */}
+                <div className="space-y-6 lg:col-span-2">
 
                 {/* ── Step 1: Customer ── */}
                 <Card>
@@ -746,6 +753,11 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                     </button>
                 </Card>
 
+                </div>{/* /left column */}
+
+                {/* ── Right column: Step 3 (sticky) ── */}
+                <div className="lg:col-span-1 lg:sticky lg:top-24">
+
                 {/* ── Step 3: Order Summary ── */}
                 <Card>
                     <CardHeader
@@ -753,7 +765,7 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                         subtitle="Apply discounts and set payment details"
                     />
 
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div className="space-y-6">
                         <div className="space-y-4">
                             {/* Order date */}
                             <div>
@@ -764,6 +776,26 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                                     onChange={(e) => setData('order_date', e.target.value)}
                                     error={allErrors.order_date}
                                 />
+                            </div>
+
+                            {/* Salesperson */}
+                            <div>
+                                <Label required>Salesperson</Label>
+                                <select
+                                    value={data.sales_user_id}
+                                    onChange={(e) => setData('sales_user_id', e.target.value ? Number(e.target.value) : '')}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition"
+                                >
+                                    <option value="">— Select salesperson —</option>
+                                    {salesPeople.map((p) => (
+                                        <option key={p.id} value={p.id}>
+                                            {p.name}{p.is_owner ? ' (Owner)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                {allErrors.sales_user_id && (
+                                    <p className="mt-1 text-sm text-red-500">{allErrors.sales_user_id}</p>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
@@ -804,7 +836,7 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                                 <p className="mt-1 text-xs text-gray-400">Added to the grand total.</p>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <div className="grid grid-cols-1 gap-3">
                                 <div>
                                     <Label>Order Status</Label>
                                     <select
@@ -894,7 +926,7 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
 
                         {/* Right — totals */}
                         <div>
-                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 space-y-3 sticky top-24">
+                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 space-y-3">
                                 <h3 className="text-sm font-semibold text-gray-700 mb-4">Order Total</h3>
 
                                 <div className="flex justify-between text-sm text-gray-600">
@@ -938,6 +970,10 @@ export default function Form({ customers = [], products = [], nextOrderNumber, s
                         </div>
                     </div>
                 </Card>
+
+                </div>{/* /right column */}
+
+                </div>{/* /grid */}
 
                 {/* ── Actions ── */}
                 <div className="flex items-center justify-end gap-3">

@@ -1,11 +1,11 @@
 import { Link } from '@inertiajs/react';
 
 const variants = {
-    primary: 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-300',
+    primary: 'bg-brand-gradient text-white shadow-brand hover:brightness-110 hover:-translate-y-px active:translate-y-0 focus:ring-primary-300',
     secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-300',
-    danger: 'bg-danger-500 text-white hover:bg-danger-600 focus:ring-red-300',
-    success: 'bg-success-500 text-white hover:bg-success-600 focus:ring-green-300',
-    outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-primary-300',
+    danger: 'bg-gradient-to-br from-danger-500 to-danger-600 text-white shadow-sm shadow-red-500/30 hover:brightness-110 focus:ring-red-300',
+    success: 'bg-gradient-to-br from-success-500 to-success-600 text-white shadow-sm shadow-emerald-500/30 hover:brightness-110 focus:ring-green-300',
+    outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:ring-primary-300',
     ghost: 'text-gray-600 hover:bg-gray-100 focus:ring-gray-300',
 };
 
@@ -26,7 +26,7 @@ export default function Button({
     loading = false,
     ...props
 }) {
-    const classes = `inline-flex items-center justify-center gap-2 rounded-lg font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${sizes[size]} ${className}`;
+    const classes = `inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:brightness-100 ${variants[variant]} ${sizes[size]} ${className}`;
 
     if (href) {
         return (

@@ -38,8 +38,8 @@ export default function Modal({ show = false, onClose, title, children, maxWidth
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <DialogPanel className={`w-full ${widths[maxWidth]} max-h-[90vh] flex flex-col transform rounded-xl bg-white shadow-2xl transition-all`}>
-                                <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 flex-shrink-0">
+                            <DialogPanel className={`w-full ${widths[maxWidth]} max-h-[90vh] flex flex-col transform rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 transition-all`}>
+                                <div className="flex items-center justify-between border-b border-gray-100 bg-brand-gradient-soft px-6 py-4 flex-shrink-0 rounded-t-2xl">
                                     <DialogTitle className="text-lg font-semibold text-gray-900">
                                         {title}
                                     </DialogTitle>

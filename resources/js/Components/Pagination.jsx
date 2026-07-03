@@ -29,7 +29,7 @@ export default function Pagination({ links, meta }) {
                                 href={link.url}
                                 className={`inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium transition ${
                                     link.active
-                                        ? 'bg-primary-500 text-white'
+                                        ? 'bg-brand-gradient text-white shadow-brand'
                                         : 'text-gray-700 hover:bg-gray-100'
                                 }`}
                                 dangerouslySetInnerHTML={{ __html: link.label }}

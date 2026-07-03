@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import VendorLayout from '@/Layouts/VendorLayout';
 import { useStorePath } from '@/lib/storePath';
+import { waLink } from '@/lib/whatsapp';
 import Card, { CardHeader, StatCard } from '@/Components/Card';
 import Badge from '@/Components/Badge';
 import {
@@ -10,10 +11,21 @@ import {
     Clock,
     TrendingUp,
     Package,
+    Cake,
+    Heart,
+    MessageCircle,
 } from 'lucide-react';
 
 const formatCurrency = (amount) =>
     '₹' + Number(amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+const formatEventDate = (dateStr) =>
+    dateStr
+        ? new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+        : '—';
+
+const daysUntilLabel = (days) =>
+    days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `in ${days} days`;
 
 const statusBadgeColor = {
     confirmed: 'blue',
@@ -34,7 +46,7 @@ const customerTypeBadgeColor = {
     vip: 'warning',
 };
 
-export default function Dashboard({ stats = {}, recentOrders = [], lowStockProducts = [], topCustomers = [] }) {
+export default function Dashboard({ stats = {}, recentOrders = [], lowStockProducts = [], topCustomers = [], upcomingCelebrations = [] }) {
     const url = useStorePath();
     return (
         <VendorLayout title="Dashboard">
@@ -191,6 +203,83 @@ export default function Dashboard({ stats = {}, recentOrders = [], lowStockProdu
 
                 {/* Right column */}
                 <div className="flex flex-col gap-6">
+
+                    {/* Upcoming Celebrations */}
+                    <Card>
+                        <CardHeader
+                            title="Upcoming Celebrations"
+                            subtitle="Birthdays & anniversaries · next 30 days"
+                            action={
+                                <Link
+                                    href={url('/customers')}
+                                    className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                                >
+                                    View all
+                                </Link>
+                            }
+                        />
+
+                        {upcomingCelebrations.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                                <Cake className="h-8 w-8 mb-2 opacity-40" />
+                                <p className="text-sm">No celebrations in the next 30 days</p>
+                            </div>
+                        ) : (
+                            <ul className="space-y-3">
+                                {upcomingCelebrations.map((e) => {
+                                    const isBirthday = e.type === 'birthday';
+                                    return (
+                                        <li key={`${e.customer_id}-${e.type}`} className="flex items-center gap-3">
+                                            <div
+                                                className={`flex-shrink-0 h-9 w-9 rounded-full flex items-center justify-center ${
+                                                    isBirthday ? 'bg-pink-50' : 'bg-rose-50'
+                                                }`}
+                                            >
+                                                {isBirthday ? (
+                                                    <Cake className="h-4 w-4 text-pink-500" />
+                                                ) : (
+                                                    <Heart className="h-4 w-4 text-rose-500" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <Link
+                                                    href={url(`/customers/${e.customer_id}`)}
+                                                    className="block text-sm font-semibold text-gray-900 truncate hover:text-primary-700 transition-colors"
+                                                >
+                                                    {e.name}
+                                                </Link>
+                                                <p className="text-xs text-gray-400 capitalize">
+                                                    {e.type} · {formatEventDate(e.date)}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                <span
+                                                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                                                        e.days_until <= 1
+                                                            ? 'bg-amber-50 text-amber-700 ring-amber-200'
+                                                            : 'bg-gray-50 text-gray-600 ring-gray-200'
+                                                    }`}
+                                                >
+                                                    {daysUntilLabel(e.days_until)}
+                                                </span>
+                                                {e.whatsapp && (
+                                                    <a
+                                                        href={waLink(e.whatsapp)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-emerald-500 hover:text-emerald-600"
+                                                        title="Send WhatsApp wish"
+                                                    >
+                                                        <MessageCircle className="h-4 w-4" />
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </Card>
 
                     {/* Low Stock Alerts */}
                     <Card>

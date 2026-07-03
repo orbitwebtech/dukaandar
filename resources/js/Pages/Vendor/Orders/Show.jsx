@@ -377,6 +377,10 @@ export default function Show({ order, settings = {}, invoiceLink = '', activeCou
                             </p>
                         </div>
                         <div>
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Salesperson</p>
+                            <p className="mt-1 text-sm text-gray-900">{order.sales_person?.name || '—'}</p>
+                        </div>
+                        <div>
                             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</p>
                             <div className="mt-1"><Badge color={statusBadgeColor[order.status] || 'gray'}>{capitalize(order.status)}</Badge></div>
                         </div>

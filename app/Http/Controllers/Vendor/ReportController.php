@@ -199,6 +199,102 @@ class ReportController extends Controller
         ]);
     }
 
+    public function salesPersons(Request $request, Store $store)
+    {
+        $storeId = $store->id;
+
+        $period = $request->input('period', 'this_month');
+        [$startDate, $endDate] = $this->getDateRange($period, $request);
+
+        $rows = $this->salesPersonRows($storeId, $store, $startDate, $endDate);
+
+        $totalOrders = $rows->sum('order_count');
+        $totalRevenue = $rows->sum('total_amount');
+        $withSales = $rows->where('order_count', '>', 0);
+
+        return Inertia::render('Vendor/Reports/SalesPersons', [
+            'rows' => $rows->values(),
+            'stats' => [
+                'totalOrders' => $totalOrders,
+                'totalRevenue' => round($totalRevenue, 2),
+                'activeSalespeople' => $withSales->count(),
+                'topPerformer' => $withSales->first()['name'] ?? null,
+            ],
+            'period' => $period,
+            'dateRange' => ['from' => $startDate->format('Y-m-d'), 'to' => $endDate->format('Y-m-d')],
+        ]);
+    }
+
+    /**
+     * Per-salesperson order count and revenue within a date range. Includes the
+     * owner and every current "sales" member (zero rows for those with no sales),
+     * plus anyone who has orders in the range even if their role has since changed.
+     */
+    private function salesPersonRows(int $storeId, Store $store, $startDate, $endDate)
+    {
+        $grouped = Order::where('store_id', $storeId)
+            ->whereIn('status', ['confirmed', 'delivered'])
+            ->whereBetween('order_date', [$startDate, $endDate])
+            ->leftJoin('users', 'users.id', '=', 'orders.sales_user_id')
+            ->select(
+                'orders.sales_user_id',
+                DB::raw('COALESCE(users.name, "Unassigned") as name'),
+                DB::raw('COUNT(*) as order_count'),
+                DB::raw('SUM(orders.total) as total_amount')
+            )
+            ->groupBy('orders.sales_user_id', 'users.name')
+            ->get()
+            ->keyBy('sales_user_id');
+
+        // Current assignable people: owner + sales members.
+        $owner = $store->organization->owner;
+        $assignable = collect();
+        if ($owner) {
+            $assignable->push(['id' => $owner->id, 'name' => $owner->name, 'is_owner' => true]);
+        }
+        $store->users()->wherePivot('role', 'sales')->orderBy('name')->get(['users.id', 'users.name'])
+            ->each(function ($u) use ($assignable, $owner) {
+                if (!$owner || $u->id !== $owner->id) {
+                    $assignable->push(['id' => $u->id, 'name' => $u->name, 'is_owner' => false]);
+                }
+            });
+        $ownerMap = $assignable->pluck('is_owner', 'id');
+
+        $rows = collect();
+        $seen = [];
+
+        // People who made sales in the range.
+        foreach ($grouped as $salesUserId => $g) {
+            $count = (int) $g->order_count;
+            $amount = (float) $g->total_amount;
+            $rows->push([
+                'sales_user_id' => $salesUserId,
+                'name' => $g->name,
+                'is_owner' => (bool) ($ownerMap[$salesUserId] ?? false),
+                'order_count' => $count,
+                'total_amount' => round($amount, 2),
+                'avg_order_value' => $count > 0 ? round($amount / $count, 2) : 0,
+            ]);
+            $seen[$salesUserId] = true;
+        }
+
+        // Assignable people with no sales in the range → zero rows.
+        foreach ($assignable as $p) {
+            if (!isset($seen[$p['id']])) {
+                $rows->push([
+                    'sales_user_id' => $p['id'],
+                    'name' => $p['name'],
+                    'is_owner' => $p['is_owner'],
+                    'order_count' => 0,
+                    'total_amount' => 0,
+                    'avg_order_value' => 0,
+                ]);
+            }
+        }
+
+        return $rows->sortByDesc('total_amount')->values();
+    }
+
     public function profitLoss(Request $request, Store $store)
     {
         $storeId = $store->id;
@@ -433,6 +529,19 @@ class ReportController extends Controller
             }, 'sales-' . date('Y-m-d') . '.csv');
         }
 
+        if ($type === 'salespersons') {
+            [$startDate, $endDate] = $this->getDateRange($request->input('period', 'this_month'), $request);
+            $rows = $this->salesPersonRows($storeId, $store, $startDate, $endDate);
+            return response()->streamDownload(function () use ($rows) {
+                $h = fopen('php://output', 'w');
+                fputcsv($h, ['Salesperson', 'Role', 'Orders', 'Total Amount', 'Avg Order Value']);
+                foreach ($rows as $r) {
+                    fputcsv($h, [$r['name'], $r['is_owner'] ? 'Owner' : 'Sales', $r['order_count'], $r['total_amount'], $r['avg_order_value']]);
+                }
+                fclose($h);
+            }, 'salespersons-' . date('Y-m-d') . '.csv');
+        }
+
         if ($type === 'margin') {
             [$startDate, $endDate] = $this->getDateRange($request->input('period', 'this_month'), $request);
             $rows = OrderItem::where('order_items.store_id', $storeId)
@@ -519,9 +628,11 @@ class ReportController extends Controller
     {
         return match ($period) {
             'today' => [now()->startOfDay(), now()->endOfDay()],
+            'last_7_days' => [now()->subDays(6)->startOfDay(), now()->endOfDay()],
             'this_week' => [now()->startOfWeek(), now()->endOfWeek()],
             'this_month' => [now()->startOfMonth(), now()->endOfMonth()],
             'last_month' => [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth()],
+            'this_year' => [now()->startOfYear(), now()->endOfYear()],
             'custom' => [
                 \Carbon\Carbon::parse($request->input('from', now()->startOfMonth()))->startOfDay(),
                 \Carbon\Carbon::parse($request->input('to', now()))->endOfDay(),

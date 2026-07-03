@@ -111,7 +111,7 @@ export default function DataTable({
     };
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-200/70 shadow-card overflow-hidden">
             {searchable && (
                 <div className="px-5 py-3 border-b border-gray-100">
                     <div className="relative max-w-sm">
@@ -121,7 +121,7 @@ export default function DataTable({
                             value={internalSearch}
                             onChange={(e) => setInternalSearch(e.target.value)}
                             placeholder={searchPlaceholder}
-                            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition"
+                            className="w-full rounded-xl border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 shadow-sm hover:border-gray-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30 outline-none transition"
                         />
                     </div>
                 </div>
@@ -137,7 +137,7 @@ export default function DataTable({
                 <div className="overflow-x-auto">
                     <table className="min-w-full">
                         <thead>
-                            <tr className="bg-gray-50 border-b border-gray-200">
+                            <tr className="bg-gradient-to-b from-gray-50 to-gray-50/50 border-b border-gray-200">
                                 {columns.map((col) => (
                                     <th
                                         key={col.key}
@@ -241,7 +241,7 @@ export default function DataTable({
                                         href={link.url}
                                         className={`inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                                             link.active
-                                                ? 'bg-primary-500 text-white shadow-sm'
+                                                ? 'bg-brand-gradient text-white shadow-brand'
                                                 : 'text-gray-600 hover:bg-gray-100'
                                         }`}
                                         dangerouslySetInnerHTML={{ __html: link.label }}

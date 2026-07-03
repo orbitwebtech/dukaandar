@@ -28,6 +28,8 @@ export default function CustomerForm({ customer = null }) {
         whatsapp: customer?.whatsapp || '',
         city: customer?.city || '',
         address: customer?.address || '',
+        birthdate: customer?.birthdate ? String(customer.birthdate).split('T')[0] : '',
+        anniversary: customer?.anniversary ? String(customer.anniversary).split('T')[0] : '',
         size_pref: customer?.size_pref || [],
         notes: customer?.notes || '',
     });
@@ -117,6 +119,30 @@ export default function CustomerForm({ customer = null }) {
                             />
                             {errors.address && <p className="mt-1 text-sm text-red-500">{errors.address}</p>}
                             <p className="mt-1 text-xs text-gray-400">Used on delivery labels and invoices.</p>
+                        </div>
+
+                        {/* Birthdate & Anniversary */}
+                        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                            <div>
+                                <Label htmlFor="birthdate">Birthdate</Label>
+                                <TextInput
+                                    id="birthdate"
+                                    type="date"
+                                    value={data.birthdate}
+                                    onChange={(e) => setData('birthdate', e.target.value)}
+                                    error={errors.birthdate}
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="anniversary">Anniversary</Label>
+                                <TextInput
+                                    id="anniversary"
+                                    type="date"
+                                    value={data.anniversary}
+                                    onChange={(e) => setData('anniversary', e.target.value)}
+                                    error={errors.anniversary}
+                                />
+                            </div>
                         </div>
 
                         {/* Size Preference */}

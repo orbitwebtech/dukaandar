@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Customer extends Model
 {
     protected $fillable = [
-        'store_id', 'name', 'whatsapp', 'city', 'address', 'size_pref',
+        'store_id', 'name', 'whatsapp', 'city', 'address', 'birthdate', 'anniversary', 'size_pref',
         'type', 'notes', 'total_orders', 'total_spent',
         'last_order_date', 'review_prompt_counter', 'reviewed_at',
     ];
@@ -17,6 +17,8 @@ class Customer extends Model
     protected $casts = [
         'size_pref' => 'array',
         'total_spent' => 'decimal:2',
+        'birthdate' => 'date',
+        'anniversary' => 'date',
         'last_order_date' => 'date',
         'reviewed_at' => 'datetime',
     ];

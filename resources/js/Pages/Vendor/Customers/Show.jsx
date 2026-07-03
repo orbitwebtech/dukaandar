@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     Phone, MapPin, StickyNote, ShoppingBag, IndianRupee,
-    CalendarDays, UserCheck, Pencil, MessageCircle, Tag, Plus, Printer, Home, Star
+    CalendarDays, UserCheck, Pencil, MessageCircle, Tag, Plus, Printer, Home, Star, Cake, Heart
 } from 'lucide-react';
 import VendorLayout from '@/Layouts/VendorLayout';
 import { useStorePath, useCan } from '@/lib/storePath';
@@ -159,6 +159,18 @@ export default function CustomerShow({ customer, issuances = [], availableCoupon
                                     <div className="flex items-center gap-1.5 text-sm text-gray-600">
                                         <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
                                         {customer.city}
+                                    </div>
+                                )}
+                                {customer.birthdate && (
+                                    <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                                        <Cake className="h-4 w-4 text-pink-400 shrink-0" />
+                                        <span>Birthday: {formatDate(customer.birthdate)}</span>
+                                    </div>
+                                )}
+                                {customer.anniversary && (
+                                    <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                                        <Heart className="h-4 w-4 text-rose-400 shrink-0" />
+                                        <span>Anniversary: {formatDate(customer.anniversary)}</span>
                                     </div>
                                 )}
                                 {sizePref.length > 0 && (

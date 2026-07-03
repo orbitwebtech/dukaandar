@@ -59,6 +59,8 @@ class CustomerController extends Controller
             'whatsapp' => 'required|string|max:20',
             'city' => 'nullable|string|max:255',
             'address' => 'nullable|string|max:1000',
+            'birthdate' => 'nullable|date',
+            'anniversary' => 'nullable|date',
             'size_pref' => 'nullable|array',
             'notes' => 'nullable|string',
         ]);
@@ -136,6 +138,8 @@ class CustomerController extends Controller
             'whatsapp' => 'required|string|max:20',
             'city' => 'nullable|string|max:255',
             'address' => 'nullable|string|max:1000',
+            'birthdate' => 'nullable|date',
+            'anniversary' => 'nullable|date',
             'size_pref' => 'nullable|array',
             'notes' => 'nullable|string',
         ]);
@@ -187,11 +191,14 @@ class CustomerController extends Controller
 
         return response()->streamDownload(function () use ($customers) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Name', 'WhatsApp', 'City', 'Type', 'Total Orders', 'Total Spent', 'Last Order', 'Added On']);
+            fputcsv($handle, ['Name', 'WhatsApp', 'City', 'Birthdate', 'Anniversary', 'Type', 'Total Orders', 'Total Spent', 'Last Order', 'Added On']);
 
             foreach ($customers as $c) {
                 fputcsv($handle, [
-                    $c->name, $c->whatsapp, $c->city, $c->type,
+                    $c->name, $c->whatsapp, $c->city,
+                    $c->birthdate?->format('Y-m-d'),
+                    $c->anniversary?->format('Y-m-d'),
+                    $c->type,
                     $c->total_orders, $c->total_spent,
                     $c->last_order_date?->format('Y-m-d'),
                     $c->created_at->format('Y-m-d'),

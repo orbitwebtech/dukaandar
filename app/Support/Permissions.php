@@ -44,6 +44,12 @@ class Permissions
                 'purchases.read',
                 'reports.read',
             ],
+            'sales' => [
+                'products.read',
+                'categories.read',
+                'customers.create', 'customers.read', 'customers.update',
+                'orders.create', 'orders.read', 'orders.update',
+            ],
             default => [],
         };
     }
