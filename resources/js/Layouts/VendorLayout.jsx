@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { useStorePath, useCan } from '@/lib/storePath';
 
+const isPathActive = (currentPath, href) =>
+    currentPath === href || currentPath.startsWith(`${href}/`);
+
 export default function VendorLayout({ children, title }) {
     const { auth, flash } = usePage().props;
     const url = useStorePath();
@@ -194,7 +197,7 @@ function SidebarContent({ navigation, orgNav, currentPath, onClose, auth }) {
 
             <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
                 {navigation.map((item) => {
-                    const isActive = currentPath.startsWith(item.href);
+                    const isActive = isPathActive(currentPath, item.href);
                     return (
                         <Link
                             key={item.name}
@@ -216,7 +219,7 @@ function SidebarContent({ navigation, orgNav, currentPath, onClose, auth }) {
                     <div className="pt-4 mt-4 border-t border-gray-100">
                         <p className="px-3 pb-2 text-[10px] font-semibold tracking-wider uppercase text-gray-400">Organization</p>
                         {orgNav.map((item) => {
-                            const isActive = currentPath.startsWith(item.href);
+                            const isActive = isPathActive(currentPath, item.href);
                             return (
                                 <Link
                                     key={item.name}

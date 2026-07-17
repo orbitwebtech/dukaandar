@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Edit2, ArrowLeft, Minus, Plus } from 'lucide-react';
 import VendorLayout from '@/Layouts/VendorLayout';
@@ -74,9 +75,37 @@ function formatAttributes(attributes) {
         .join(', ');
 }
 
+// An order can contain several variants of the same product, which arrive here as
+// separate order items. Roll them up so each order appears once.
+function groupItemsByOrder(items = []) {
+    const orders = new Map();
+
+    for (const item of items) {
+        const key = item.order_id ?? `item-${item.id}`;
+        if (!orders.has(key)) {
+            orders.set(key, {
+                key,
+                order: item.order,
+                qty: 0,
+                total: 0,
+                variants: [],
+            });
+        }
+        const row = orders.get(key);
+        row.qty += Number(item.qty ?? 0);
+        row.total += Number(item.line_total ?? (item.unit_price ?? 0) * (item.qty ?? 0));
+        if (item.variant) {
+            row.variants.push(formatAttributes(item.variant.attributes));
+        }
+    }
+
+    return [...orders.values()];
+}
+
 export default function Show({ product }) {
     const url = useStorePath();
     const isVariable = product.type === 'variable';
+    const orderRows = useMemo(() => groupItemsByOrder(product.order_items), [product.order_items]);
 
     return (
         <VendorLayout title={product.name}>
@@ -301,43 +330,47 @@ export default function Show({ product }) {
                                             Customer
                                         </th>
                                         <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                            Variants
+                                        </th>
+                                        <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                             Qty
                                         </th>
                                         <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                            Price
+                                            Total
                                         </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 bg-white">
-                                    {product.order_items.map((item) => (
-                                        <tr key={item.id} className="hover:bg-gray-50/50">
+                                    {orderRows.map((row) => (
+                                        <tr key={row.key} className="hover:bg-gray-50/50">
                                             <td className="px-5 py-3">
-                                                {item.order ? (
+                                                {row.order ? (
                                                     <Link
-                                                        href={url(`/orders/${item.order.id}`)}
+                                                        href={url(`/orders/${row.order.id}`)}
                                                         className="text-sm font-medium text-primary-600 hover:text-primary-700"
                                                     >
-                                                        #{item.order.order_number ?? item.order.id}
+                                                        #{row.order.order_number ?? row.order.id}
                                                     </Link>
                                                 ) : (
                                                     <span className="text-sm text-gray-400">—</span>
                                                 )}
                                             </td>
                                             <td className="px-5 py-3 text-sm text-gray-600">
-                                                {formatDate(item.order?.order_date)}
+                                                {formatDate(row.order?.order_date)}
                                             </td>
                                             <td className="px-5 py-3 text-sm text-gray-700">
-                                                {item.order?.customer
-                                                    ? item.order.customer.name
+                                                {row.order?.customer
+                                                    ? row.order.customer.name
                                                     : '—'}
+                                            </td>
+                                            <td className="px-5 py-3 text-sm text-gray-500">
+                                                {row.variants.length ? row.variants.join(' · ') : '—'}
                                             </td>
                                             <td className="px-5 py-3 text-sm font-medium text-gray-900">
-                                                {item.qty ?? '—'}
+                                                {row.qty || '—'}
                                             </td>
                                             <td className="px-5 py-3 text-sm font-semibold text-gray-900">
-                                                {item.unit_price != null
-                                                    ? `₹${Number(item.unit_price).toLocaleString('en-IN')}`
-                                                    : '—'}
+                                                ₹{row.total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                                             </td>
                                         </tr>
                                     ))}

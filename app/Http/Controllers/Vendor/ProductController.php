@@ -118,7 +118,7 @@ class ProductController extends Controller
 
     public function show(Store $store, Product $product)
     {
-        $product->load('category', 'variants', 'orderItems.order.customer');
+        $product->load('category', 'variants', 'orderItems.order.customer', 'orderItems.variant');
         return Inertia::render('Vendor/Products/Show', ['product' => $product]);
     }
 
