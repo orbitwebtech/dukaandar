@@ -154,7 +154,8 @@ function ItemRow({ item, idx, products, productOptions, allItems, allErrors, upd
                             min="1"
                             max={availableStock !== null ? availableStock : undefined}
                             value={item.qty}
-                            onChange={(e) => updateItem(item._key, { qty: parseInt(e.target.value) || 1 })}
+                            onChange={(e) => updateItem(item._key, { qty: e.target.value })}
+                            onBlur={(e) => updateItem(item._key, { qty: parseInt(e.target.value) || 1 })}
                             className={`w-14 rounded border px-1.5 py-1 text-sm text-center ${overStock ? 'border-red-300' : 'border-gray-300'} focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none`}
                         />
                     </div>
