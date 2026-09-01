@@ -17,6 +17,24 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
+    /**
+     * SQL expression for an order item's revenue net of the order-level
+     * discount. `line_total` already reflects any line-level discount but
+     * NOT the whole-order discount (which is only applied to orders.total),
+     * so aggregating raw line_total overstates revenue. We allocate the
+     * order discount proportionally to each line's share of the subtotal.
+     * Because subtotal = Σ line_total per order, the adjusted lines sum
+     * back to (subtotal − discount) exactly. Requires the query to join
+     * `orders`. Returns a bare expression; wrap in SUM()/add an alias as
+     * the caller needs.
+     */
+    private function netLineRevenueSql(): string
+    {
+        return 'order_items.line_total * (CASE WHEN orders.subtotal > 0 '
+            . 'THEN (orders.subtotal - COALESCE(orders.discount_amount, 0)) / orders.subtotal '
+            . 'ELSE 1 END)';
+    }
+
     public function inventory(Request $request, Store $store)
     {
         $storeId = $store->id;
@@ -110,7 +128,7 @@ class ReportController extends Controller
             ->whereIn('orders.status', ['confirmed', 'delivered'])
             ->whereBetween('orders.order_date', [$startDate, $endDate])
             ->join('products', 'products.id', '=', 'order_items.product_id')
-            ->select('products.name', DB::raw('SUM(order_items.line_total) as revenue'), DB::raw('SUM(order_items.qty) as qty'))
+            ->select('products.name', DB::raw('SUM(' . $this->netLineRevenueSql() . ') as revenue'), DB::raw('SUM(order_items.qty) as qty'))
             ->groupBy('products.id', 'products.name')
             ->orderByDesc('revenue')
             ->limit(10)
@@ -147,7 +165,7 @@ class ReportController extends Controller
             ->leftJoin('categories', 'categories.id', '=', 'products.category_id')
             ->select(
                 DB::raw('COALESCE(categories.name, "Uncategorised") as name'),
-                DB::raw('SUM(order_items.line_total) as revenue'),
+                DB::raw('SUM(' . $this->netLineRevenueSql() . ') as revenue'),
                 DB::raw('SUM(order_items.qty) as qty')
             )
             ->groupBy('categories.id', 'categories.name')
@@ -321,7 +339,7 @@ class ReportController extends Controller
                 'products.name as product_name',
                 DB::raw('COALESCE(categories.name, "Uncategorised") as category_name'),
                 'order_items.qty',
-                'order_items.line_total as revenue',
+                DB::raw($this->netLineRevenueSql() . ' as revenue'),
                 DB::raw('order_items.qty * COALESCE(product_variants.cost_price, products.cost_price, 0) as cost'),
                 DB::raw('CASE WHEN COALESCE(product_variants.cost_price, products.cost_price) IS NULL THEN 1 ELSE 0 END as missing_cost'),
             )
@@ -373,7 +391,7 @@ class ReportController extends Controller
             ->leftJoin('product_variants', 'product_variants.id', '=', 'order_items.variant_id')
             ->select(
                 DB::raw('DATE(orders.order_date) as date'),
-                DB::raw('SUM(order_items.line_total) as revenue'),
+                DB::raw('SUM(' . $this->netLineRevenueSql() . ') as revenue'),
                 DB::raw('SUM(order_items.qty * COALESCE(product_variants.cost_price, products.cost_price, 0)) as cost'),
             )
             ->groupBy('date')
@@ -555,7 +573,7 @@ class ReportController extends Controller
                     'products.name as product_name',
                     DB::raw('COALESCE(categories.name, "Uncategorised") as category_name'),
                     'order_items.qty',
-                    'order_items.line_total as revenue',
+                    DB::raw($this->netLineRevenueSql() . ' as revenue'),
                     DB::raw('order_items.qty * COALESCE(product_variants.cost_price, products.cost_price, 0) as cost'),
                 )
                 ->get();
