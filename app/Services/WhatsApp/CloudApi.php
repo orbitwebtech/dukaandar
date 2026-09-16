@@ -83,10 +83,22 @@ class CloudApi
     {
         return Http::withToken($token)
             ->get(self::graphUrl($phoneNumberId), [
-                'fields' => 'display_phone_number,verified_name,quality_rating,throughput',
+                'fields' => 'display_phone_number,verified_name,quality_rating,throughput,status,code_verification_status,platform_type',
             ])
             ->throw()
             ->json() ?: [];
+    }
+
+    /**
+     * Is this number already usable for Cloud API messaging?
+     *
+     * A number registered previously — by hand, or by an earlier connection —
+     * needs no second registration, and attempting one fails on the two-step
+     * PIN it already has.
+     */
+    public static function isAlreadyRegistered(array $details): bool
+    {
+        return in_array(strtoupper((string) ($details['status'] ?? '')), ['CONNECTED', 'VERIFIED'], true);
     }
 
     /** Send a free-form text reply. Only valid inside the 24-hour window. */

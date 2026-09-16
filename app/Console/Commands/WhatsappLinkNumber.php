@@ -22,6 +22,8 @@ class WhatsappLinkNumber extends Command
                             {--waba-id= : The WhatsApp Business Account id shown on the same screen}
                             {--token= : Temporary or system-user access token}
                             {--demo : Link a fake number so the screens can be clicked without Meta}
+                            {--register : Also register the number for Cloud API (only if it is still Pending)}
+                            {--no-subscribe : Skip subscribing this app to the account\'s webhooks}
                             {--clear : Remove this store\'s WhatsApp connection}';
 
     protected $description = 'Link a WhatsApp number to a store for local testing';
@@ -89,7 +91,7 @@ class WhatsappLinkNumber extends Command
             return self::FAILURE;
         }
 
-        WhatsappAccount::updateOrCreate(['store_id' => $store->id], [
+        $account = WhatsappAccount::updateOrCreate(['store_id' => $store->id], [
             'waba_id' => $this->option('waba-id'),
             'phone_number_id' => $phoneNumberId,
             'access_token' => $token,
@@ -102,7 +104,36 @@ class WhatsappLinkNumber extends Command
         ]);
 
         $this->info("Linked {$details['display_phone_number']} to {$store->name}.");
-        $this->line('Sending will work now. Receiving still needs the webhook pointed at a public URL.');
+
+        // Embedded Signup does this automatically. A number linked by hand has
+        // not had it done, and without it no incoming message ever arrives.
+        if (! $this->option('no-subscribe')) {
+            try {
+                CloudApi::subscribeApp($account->waba_id, $token);
+                $this->info('Subscribed this app to the account\'s webhooks.');
+            } catch (\Throwable $e) {
+                $this->error('Could not subscribe to webhooks: ' . $e->getMessage());
+                $this->line('Incoming messages will not arrive until this succeeds.');
+            }
+        }
+
+        if ($this->option('register')) {
+            $pin = $account->two_step_pin
+                ?: str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+            try {
+                CloudApi::registerNumber($account->phone_number_id, $token, $pin);
+                $account->update(['two_step_pin' => $pin]);
+                $this->info('Number registered for Cloud API. PIN stored.');
+            } catch (\Throwable $e) {
+                // Already-registered numbers fail here, which is harmless.
+                $this->warn('Registration skipped: ' . $e->getMessage());
+            }
+        }
+
+        $this->newLine();
+        $this->line('Sending works now. For replies to arrive, the app\'s webhook callback URL');
+        $this->line('must also be set in the Meta dashboard, subscribed to the "messages" field.');
 
         return self::SUCCESS;
     }

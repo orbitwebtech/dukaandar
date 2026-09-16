@@ -66,13 +66,18 @@ class WhatsappConnectController extends Controller
         try {
             CloudApi::subscribeApp($account->waba_id, $token);
 
-            if (! $account->two_step_pin) {
-                $account->two_step_pin = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            }
-
-            CloudApi::registerNumber($account->phone_number_id, $token, $account->two_step_pin);
-
             $details = CloudApi::phoneNumberDetails($account->phone_number_id, $token);
+
+            // A number that is already live needs no second registration, and
+            // trying one fails against the two-step PIN it already has.
+            if (! CloudApi::isAlreadyRegistered($details)) {
+                if (! $account->two_step_pin) {
+                    $account->two_step_pin = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                }
+
+                CloudApi::registerNumber($account->phone_number_id, $token, $account->two_step_pin);
+                $details = CloudApi::phoneNumberDetails($account->phone_number_id, $token);
+            }
 
             $account->fill([
                 'display_phone_number' => $details['display_phone_number'] ?? null,
@@ -80,11 +85,12 @@ class WhatsappConnectController extends Controller
                 'quality_rating' => $details['quality_rating'] ?? null,
                 'status' => 'connected',
                 'connected_at' => now(),
+                'last_error' => null,
             ])->save();
         } catch (\Throwable $e) {
             $account->fill([
                 'status' => 'pending',
-                'last_error' => substr($e->getMessage(), 0, 250),
+                'last_error' => substr($this->explain($e), 0, 250),
             ])->save();
 
             Log::warning('WhatsApp connection incomplete', [
@@ -92,16 +98,19 @@ class WhatsappConnectController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return back()->withErrors([
-                'whatsapp' => 'Connected to Meta, but the number could not be registered yet. Try Retry registration in a moment.',
-            ]);
+            return back()->withErrors(['whatsapp' => $this->explain($e)]);
         }
 
         return back()->with('success', 'WhatsApp connected successfully.');
     }
 
-    /** Re-run registration without repeating the whole signup. */
-    public function retry(Store $store)
+    /**
+     * Re-run registration without repeating the whole signup.
+     *
+     * Accepts the number's existing two-step PIN, for numbers that were set up
+     * outside this app and already have one.
+     */
+    public function retry(Request $request, Store $store)
     {
         $account = $store->whatsappAccount;
 
@@ -109,21 +118,57 @@ class WhatsappConnectController extends Controller
             return back()->withErrors(['whatsapp' => 'Connect WhatsApp first.']);
         }
 
+        $validated = $request->validate([
+            'pin' => ['nullable', 'string', 'regex:/^\d{6}$/'],
+        ], [
+            'pin.regex' => 'The two-step PIN is exactly 6 digits.',
+        ]);
+
         try {
-            CloudApi::registerNumber(
-                $account->phone_number_id,
-                $account->access_token,
-                $account->two_step_pin ?? str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT)
-            );
+            $details = CloudApi::phoneNumberDetails($account->phone_number_id, $account->access_token);
 
-            $account->fill(['status' => 'connected', 'connected_at' => now(), 'last_error' => null])->save();
+            if (! CloudApi::isAlreadyRegistered($details)) {
+                $pin = $validated['pin']
+                    ?: ($account->two_step_pin ?: str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT));
+
+                CloudApi::registerNumber($account->phone_number_id, $account->access_token, $pin);
+                $account->two_step_pin = $pin;
+
+                $details = CloudApi::phoneNumberDetails($account->phone_number_id, $account->access_token);
+            }
+
+            $account->fill([
+                'display_phone_number' => $details['display_phone_number'] ?? $account->display_phone_number,
+                'verified_name' => $details['verified_name'] ?? $account->verified_name,
+                'status' => 'connected',
+                'connected_at' => now(),
+                'last_error' => null,
+            ])->save();
         } catch (\Throwable $e) {
-            $account->update(['last_error' => substr($e->getMessage(), 0, 250)]);
+            $account->update(['last_error' => substr($this->explain($e), 0, 250)]);
 
-            return back()->withErrors(['whatsapp' => 'Registration failed again: ' . $e->getMessage()]);
+            return back()->withErrors(['whatsapp' => $this->explain($e)]);
         }
 
-        return back()->with('success', 'Number registered.');
+        return back()->with('success', 'WhatsApp is ready to send.');
+    }
+
+    /** Turn Meta's error codes into something a shop owner can act on. */
+    private function explain(\Throwable $e): string
+    {
+        $code = null;
+
+        if ($e instanceof \Illuminate\Http\Client\RequestException) {
+            $code = $e->response->json('error.code');
+        }
+
+        return match ((int) $code) {
+            133005 => 'This number already has a two-step verification PIN. Enter that PIN below, or turn two-step verification off in WhatsApp Manager and try again.',
+            133016 => 'Meta has temporarily blocked registration for this number after too many attempts. Wait a few hours, then try again.',
+            133010 => 'This number is not registered for the WhatsApp Business Platform yet. Finish setup in WhatsApp Manager first.',
+            190 => 'The access token is no longer valid. Reconnect WhatsApp.',
+            default => 'Connected to Meta, but the number is not ready for sending yet. ' . $e->getMessage(),
+        };
     }
 
     /** Forget the token. The store can reconnect at any time. */

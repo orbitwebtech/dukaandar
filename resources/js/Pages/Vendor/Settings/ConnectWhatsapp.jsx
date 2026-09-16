@@ -56,6 +56,7 @@ export default function ConnectWhatsapp({ account = null }) {
     const session = useRef(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
+    const [pin, setPin] = useState('');
 
     // Meta posts the WABA and phone number ids here; the login callback
     // delivers the code separately. Both halves are needed.
@@ -182,16 +183,41 @@ export default function ConnectWhatsapp({ account = null }) {
                 {account.status !== 'connected' && (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
                         <p className="text-sm text-amber-900">
-                            The number is linked but not registered for sending yet.
-                            {account.last_error ? ` Meta said: ${account.last_error}` : ''}
+                            {account.last_error || 'The number is linked but not registered for sending yet.'}
                         </p>
-                        <button
-                            type="button"
-                            onClick={() => router.post(url('/settings/whatsapp/retry'), {}, { preserveScroll: true })}
-                            className="mt-3 rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700"
-                        >
-                            Retry registration
-                        </button>
+
+                        <div className="mt-3 flex flex-wrap items-end gap-2">
+                            <div>
+                                <label className="block text-xs font-medium text-amber-900">
+                                    Two-step PIN (only if this number already has one)
+                                </label>
+                                <input
+                                    value={pin}
+                                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    inputMode="numeric"
+                                    placeholder="123456"
+                                    className="mt-1 w-32 rounded-md border-amber-300 text-sm shadow-sm"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    router.post(
+                                        url('/settings/whatsapp/retry'),
+                                        pin ? { pin } : {},
+                                        { preserveScroll: true }
+                                    )
+                                }
+                                className="rounded-md bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700"
+                            >
+                                Finish setup
+                            </button>
+                        </div>
+
+                        <p className="mt-2 text-xs text-amber-800">
+                            Leave the PIN empty if you have never set one. You can also turn two-step
+                            verification off in WhatsApp Manager and press Finish setup.
+                        </p>
                     </div>
                 )}
             </div>
