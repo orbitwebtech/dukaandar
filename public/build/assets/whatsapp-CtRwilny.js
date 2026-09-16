@@ -1,0 +1,1 @@
+var e=`91`;function t(t){let n=String(t||``).replace(/\D/g,``);return n?n.length===10?e+n:n.length===11&&n.startsWith(`0`)?e+n.slice(1):n:``}function n(e,n=``){let r=t(e);return r?`https://wa.me/${r}${n?`?text=${encodeURIComponent(n)}`:``}`:`#`}export{n as t};

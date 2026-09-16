@@ -6,7 +6,7 @@ class Permissions
 {
     public const RESOURCES = [
         'products', 'categories', 'customers', 'orders',
-        'coupons', 'purchases', 'reports', 'settings',
+        'coupons', 'purchases', 'reports', 'settings', 'whatsapp',
     ];
 
     public const ACTIONS = ['create', 'read', 'update', 'delete'];
@@ -34,7 +34,8 @@ class Permissions
             'owner' => self::all(),
             'manager' => array_merge(
                 self::crudFor(['products', 'categories', 'customers', 'orders', 'coupons', 'purchases']),
-                ['reports.read', 'settings.read', 'settings.update', 'team.invite']
+                ['reports.read', 'settings.read', 'settings.update', 'team.invite',
+                 'whatsapp.read', 'whatsapp.update']
             ),
             'employee' => [
                 'products.read',

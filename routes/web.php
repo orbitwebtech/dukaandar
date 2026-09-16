@@ -13,6 +13,11 @@ use App\Http\Controllers\Vendor\OrderController;
 use App\Http\Controllers\Vendor\CouponController;
 use App\Http\Controllers\Vendor\PurchaseController;
 use App\Http\Controllers\Vendor\SettingController;
+use App\Http\Controllers\Vendor\WhatsappConnectController;
+use App\Http\Controllers\Vendor\WhatsappTemplateController;
+use App\Http\Controllers\Vendor\WhatsappMessageController;
+use App\Http\Controllers\Vendor\WhatsappInboxController;
+use App\Http\Controllers\WhatsappWebhookController;
 use App\Http\Controllers\Vendor\ReportController;
 use App\Http\Controllers\Org\ExpenseController as OrgExpenseController;
 use App\Http\Controllers\Org\StoreController as OrgStoreController;
@@ -219,7 +224,38 @@ Route::prefix('store/{store}')->middleware(['auth', 'verified', 'system_role:mem
         ->middleware('store.can:settings.update')->name('settings.update');
     Route::post('/settings/logo', [SettingController::class, 'uploadLogo'])
         ->middleware('store.can:settings.update')->name('settings.logo');
+
+    // WhatsApp connection (Meta Embedded Signup)
+    Route::post('/settings/whatsapp/connect', [WhatsappConnectController::class, 'store'])
+        ->middleware('store.can:settings.update')->name('settings.whatsapp.connect');
+    Route::post('/settings/whatsapp/retry', [WhatsappConnectController::class, 'retry'])
+        ->middleware('store.can:settings.update')->name('settings.whatsapp.retry');
+    Route::delete('/settings/whatsapp', [WhatsappConnectController::class, 'destroy'])
+        ->middleware('store.can:settings.update')->name('settings.whatsapp.disconnect');
+
+    // WhatsApp inbox
+    Route::get('/whatsapp', [WhatsappInboxController::class, 'index'])
+        ->middleware('store.can:whatsapp.read')->name('whatsapp.inbox');
+    Route::post('/whatsapp/{whatsappConversation}/reply', [WhatsappInboxController::class, 'reply'])
+        ->middleware('store.can:whatsapp.update')->name('whatsapp.reply');
+    Route::post('/whatsapp/{whatsappConversation}/read', [WhatsappInboxController::class, 'markRead'])
+        ->middleware('store.can:whatsapp.read')->name('whatsapp.read');
+
+    // WhatsApp message templates (created on the store's own WABA)
+    Route::post('/settings/whatsapp/templates', [WhatsappTemplateController::class, 'store'])
+        ->middleware('store.can:settings.update')->name('settings.whatsapp.templates.store');
+    Route::post('/settings/whatsapp/templates/sync', [WhatsappTemplateController::class, 'sync'])
+        ->middleware('store.can:settings.update')->name('settings.whatsapp.templates.sync');
+
+    // Send an invoice over WhatsApp from the order screen
+    Route::post('/orders/{order}/whatsapp-invoice', [WhatsappMessageController::class, 'sendInvoice'])
+        ->middleware('store.can:orders.update')->name('orders.whatsapp-invoice');
 });
+
+// Meta calls this for every connected store. Public by necessity: authenticated
+// by the X-Hub-Signature-256 header, not by a session.
+Route::get('/webhooks/whatsapp', [WhatsappWebhookController::class, 'verify']);
+Route::post('/webhooks/whatsapp', [WhatsappWebhookController::class, 'handle']);
 
 // Super admin
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'system_role:super_admin'])->group(function () {

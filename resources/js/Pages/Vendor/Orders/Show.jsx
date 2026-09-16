@@ -18,7 +18,7 @@ const formatCurrency = (v) => '₹' + Number(v || 0).toLocaleString('en-IN', { m
 const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
 const cleanPhone = normalizePhone;
 
-export default function Show({ order, settings = {}, invoiceLink = '', activeCoupons = [] }) {
+export default function Show({ order, settings = {}, invoiceLink = '', activeCoupons = [], whatsappConnected = false }) {
     const url = useStorePath();
     const can = useCan();
     const [showReviewModal, setShowReviewModal] = useState(false);
@@ -95,6 +95,18 @@ export default function Show({ order, settings = {}, invoiceLink = '', activeCou
                 if (settings.google_review_link) {
                     setShowReviewModal(true);
                 }
+            },
+        });
+    };
+
+    // Sends through the store's connected WhatsApp number, from our server.
+    // Falls back to opening WhatsApp by hand when the store has not connected.
+    const handleSendViaApi = () => {
+        if (!order.customer?.whatsapp) return;
+        router.post(url(`/orders/${order.id}/whatsapp-invoice`), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (settings.google_review_link) setShowReviewModal(true);
             },
         });
     };
@@ -267,7 +279,7 @@ export default function Show({ order, settings = {}, invoiceLink = '', activeCou
                         {/* Share on WhatsApp (with PDF on mobile) */}
                         <button
                             type="button"
-                            onClick={handleSharePdf}
+                            onClick={whatsappConnected ? handleSendViaApi : handleSharePdf}
                             disabled={!order.customer?.whatsapp}
                             className="flex items-center gap-3 rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4 hover:border-emerald-400 hover:shadow-sm transition text-left disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -276,7 +288,7 @@ export default function Show({ order, settings = {}, invoiceLink = '', activeCou
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-emerald-800">Send on WhatsApp</p>
-                                <p className="text-xs text-emerald-600">{isMobile ? 'Share PDF + message' : 'Opens WhatsApp with message + invoice link'}</p>
+                                <p className="text-xs text-emerald-600">{whatsappConnected ? 'Sends from your connected number' : (isMobile ? 'Share PDF + message' : 'Opens WhatsApp with message + invoice link')}</p>
                             </div>
                         </button>
                     </div>

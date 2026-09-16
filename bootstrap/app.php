@@ -14,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
+        // Meta signs webhooks with X-Hub-Signature-256; it cannot send a CSRF token.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/whatsapp',
+        ]);
         $middleware->alias([
             'system_role' => \App\Http\Middleware\EnsureSystemRole::class,
             'store.access' => \App\Http\Middleware\EnsureStoreAccess::class,

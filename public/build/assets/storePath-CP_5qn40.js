@@ -1,0 +1,1 @@
+import{o as e}from"./jsx-runtime-BhPMO2zw.js";function t(){let{auth:t}=e().props,n=t?.currentStore?.slug;return e=>n?`/store/${n}${e.startsWith(`/`)?``:`/`}${e}`:e}function n(){let{auth:t}=e().props,n=t?.currentStore?.permissions||[];return e=>n.includes(e)}export{t as n,n as t};

@@ -330,6 +330,7 @@ class OrderController extends Controller
             'settings' => $settings,
             'invoiceLink' => $invoiceLink,
             'activeCoupons' => $activeCoupons,
+            'whatsappConnected' => (bool) $store->whatsappAccount?->isConnected(),
         ]);
     }
 

@@ -2,6 +2,8 @@ import { useState, useRef } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import VendorLayout from '@/Layouts/VendorLayout';
 import { useStorePath } from '@/lib/storePath';
+import ConnectWhatsapp from './ConnectWhatsapp';
+import WhatsappTemplates from './WhatsappTemplates';
 import Card, { CardHeader } from '@/Components/Card';
 import Label from '@/Components/Label';
 import TextInput from '@/Components/TextInput';
@@ -14,6 +16,7 @@ const TABS = [
     { id: 'appearance', label: 'Appearance' },
     { id: 'review', label: 'Review' },
     { id: 'inventory', label: 'Inventory' },
+    { id: 'whatsapp', label: 'WhatsApp' },
 ];
 
 const COLOR_PRESETS = [
@@ -38,7 +41,7 @@ function Field({ label, children, required }) {
     );
 }
 
-export default function Settings({ settings = {}, tenant = {} }) {
+export default function Settings({ settings = {}, tenant = {}, whatsappAccount = null, whatsappTemplates = [] }) {
     const url = useStorePath();
     const [activeTab, setActiveTab] = useState('shop');
 
@@ -474,6 +477,17 @@ export default function Settings({ settings = {}, tenant = {} }) {
                                     Products with no orders in this many days will be flagged as slow-moving.
                                 </p>
                             </Field>
+                        </div>
+                    </Card>
+                )}
+
+                {/* WhatsApp Tab */}
+                {activeTab === 'whatsapp' && (
+                    <Card>
+                        <CardHeader title="WhatsApp" subtitle="Reply to customers from inside Dukaandar" />
+                        <ConnectWhatsapp account={whatsappAccount} />
+                        <div className="mt-8 border-t border-gray-200 pt-6">
+                            <WhatsappTemplates templates={whatsappTemplates} connected={whatsappAccount?.status === 'connected'} />
                         </div>
                     </Card>
                 )}

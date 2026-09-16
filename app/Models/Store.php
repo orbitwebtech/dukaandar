@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Store extends Model
 {
@@ -57,6 +58,21 @@ class Store extends Model
     public function purchases(): HasMany
     {
         return $this->hasMany(Purchase::class);
+    }
+
+    public function whatsappAccount(): HasOne
+    {
+        return $this->hasOne(WhatsappAccount::class);
+    }
+
+    public function whatsappTemplates(): HasMany
+    {
+        return $this->hasMany(WhatsappTemplate::class);
+    }
+
+    public function whatsappConversations(): HasMany
+    {
+        return $this->hasMany(WhatsappConversation::class);
     }
 
     public function settings(): HasMany

@@ -13,8 +13,24 @@ class SettingController extends Controller
     {
         $settings = $store->settings->pluck('value', 'key')->toArray();
 
+        $account = $store->whatsappAccount;
+
         return Inertia::render('Vendor/Settings/Index', [
             'settings' => $settings,
+            // Tokens are hidden on the model, but be explicit about what leaves the server.
+            'whatsappAccount' => $account ? [
+                'status' => $account->status,
+                'display_phone_number' => $account->display_phone_number,
+                'verified_name' => $account->verified_name,
+                'quality_rating' => $account->quality_rating,
+                'messaging_tier' => $account->messaging_tier,
+                'last_error' => $account->last_error,
+                'connected_at' => $account->connected_at?->diffForHumans(),
+                'last_webhook_at' => $account->last_webhook_at?->diffForHumans(),
+            ] : null,
+            'whatsappTemplates' => $store->whatsappTemplates()
+                ->orderBy('name')
+                ->get(['name', 'language', 'category', 'status', 'body', 'rejected_reason']),
             'store' => [
                 'id' => $store->id,
                 'name' => $store->name,
