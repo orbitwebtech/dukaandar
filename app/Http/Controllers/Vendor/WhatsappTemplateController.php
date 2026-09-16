@@ -9,6 +9,7 @@ use App\Services\InvoicePdf;
 use App\Services\WhatsApp\CloudApi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class WhatsappTemplateController extends Controller
 {
@@ -62,6 +63,11 @@ class WhatsappTemplateController extends Controller
                     'sample-invoice.pdf'
                 );
             } catch (\Throwable $e) {
+                Log::warning('WhatsApp sample invoice upload failed', [
+                    'store_id' => $store->id,
+                    'error' => $e->getMessage(),
+                ]);
+
                 return back()->withErrors([
                     'template' => 'Could not upload the sample invoice Meta needs to review a PDF template: ' . $e->getMessage(),
                 ]);
@@ -98,6 +104,15 @@ class WhatsappTemplateController extends Controller
                 ->throw()
                 ->json();
         } catch (\Illuminate\Http\Client\RequestException $e) {
+            // Without this, a rejected template leaves no trace on the server
+            // and the only clue is a red box the user may have scrolled past.
+            Log::warning('WhatsApp template rejected by Meta', [
+                'store_id' => $store->id,
+                'template' => $validated['name'],
+                'status' => $e->response->status(),
+                'response' => $e->response->json('error'),
+            ]);
+
             return back()->withErrors([
                 'template' => $e->response->json('error.error_user_msg')
                     ?? $e->response->json('error.message')
