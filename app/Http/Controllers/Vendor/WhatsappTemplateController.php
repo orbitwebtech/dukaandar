@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Vendor;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
 use App\Models\WhatsappTemplate;
+use App\Services\InvoicePdf;
 use App\Services\WhatsApp\CloudApi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -32,6 +33,7 @@ class WhatsappTemplateController extends Controller
             'category' => 'required|in:UTILITY,MARKETING',
             'body' => 'required|string|max:1024',
             'footer' => 'nullable|string|max:60',
+            'attach_pdf' => 'boolean',
             'examples' => 'array',
             'examples.*' => 'string|max:80',
         ], [
@@ -49,14 +51,36 @@ class WhatsappTemplateController extends Controller
             ]);
         }
 
-        $components = [[
-            'type' => 'BODY',
-            'text' => $validated['body'],
-        ]];
+        $components = [];
+
+        // A document header is what lets the invoice PDF itself reach the
+        // customer. Meta will not review one without a sample file to look at.
+        if (! empty($validated['attach_pdf'])) {
+            try {
+                $handle = CloudApi::uploadSampleFile(
+                    InvoicePdf::sampleBytes($store),
+                    'sample-invoice.pdf'
+                );
+            } catch (\Throwable $e) {
+                return back()->withErrors([
+                    'template' => 'Could not upload the sample invoice Meta needs to review a PDF template: ' . $e->getMessage(),
+                ]);
+            }
+
+            $components[] = [
+                'type' => 'HEADER',
+                'format' => 'DOCUMENT',
+                'example' => ['header_handle' => [$handle]],
+            ];
+        }
+
+        $body = ['type' => 'BODY', 'text' => $validated['body']];
 
         if ($placeholders > 0) {
-            $components[0]['example'] = ['body_text' => [array_slice($examples, 0, $placeholders)]];
+            $body['example'] = ['body_text' => [array_slice($examples, 0, $placeholders)]];
         }
+
+        $components[] = $body;
 
         if (! empty($validated['footer'])) {
             $components[] = ['type' => 'FOOTER', 'text' => $validated['footer']];

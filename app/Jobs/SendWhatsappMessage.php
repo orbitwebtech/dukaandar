@@ -2,7 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Models\Order;
 use App\Models\WhatsappMessage;
+use App\Services\InvoicePdf;
 use App\Services\WhatsApp\CloudApi;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -40,14 +42,16 @@ class SendWhatsappMessage implements ShouldQueue
         $to = $message->conversation->wa_id;
 
         try {
-            $response = $message->type === 'template'
-                ? $api->sendTemplate(
+            $response = match ($message->type) {
+                'document' => $this->sendInvoiceDocument($api, $message, $to),
+                'template' => $api->sendTemplate(
                     $to,
                     $message->template_name,
                     $message->payload['language'] ?? 'en',
                     $message->payload['params'] ?? []
-                )
-                : $api->sendText($to, (string) $message->body);
+                ),
+                default => $api->sendText($to, (string) $message->body),
+            };
         } catch (\Throwable $e) {
             $this->handleFailure($message, $e);
 
@@ -63,6 +67,42 @@ class SendWhatsappMessage implements ShouldQueue
         ]);
 
         $message->conversation->update(['last_message_at' => now()]);
+    }
+
+    /**
+     * Render the invoice, upload it once, and attach it — either as a plain
+     * document inside the 24-hour window, or in an approved template's header
+     * outside it.
+     */
+    private function sendInvoiceDocument(CloudApi $api, WhatsappMessage $message, string $to): array
+    {
+        $order = $message->order ?? Order::find($message->payload['attach_invoice_for_order'] ?? null);
+
+        if (! $order) {
+            throw new \RuntimeException('The order for this invoice no longer exists.');
+        }
+
+        $filename = $message->payload['filename'] ?? InvoicePdf::filename($order);
+
+        // Reuse the id if this is a retry — media lasts 30 days, and uploading
+        // the same PDF again on every attempt is pure waste.
+        $mediaId = $message->media_id ?: $api->uploadMedia(InvoicePdf::bytes($order), $filename);
+
+        if ($mediaId !== $message->media_id) {
+            $message->update(['media_id' => $mediaId]);
+        }
+
+        if ($message->template_name) {
+            return $api->sendTemplate(
+                $to,
+                $message->template_name,
+                $message->payload['language'] ?? 'en',
+                $message->payload['params'] ?? [],
+                ['id' => $mediaId, 'filename' => $filename]
+            );
+        }
+
+        return $api->sendDocument($to, $mediaId, $filename, (string) $message->body);
     }
 
     private function handleFailure(WhatsappMessage $message, \Throwable $e): void

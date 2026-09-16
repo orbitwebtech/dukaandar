@@ -9,6 +9,7 @@ use App\Models\Store;
 use App\Models\User;
 use App\Models\WhatsappConversation;
 use App\Models\WhatsappMessage;
+use App\Services\InvoicePdf;
 
 /**
  * Creates the outbound message row, then hands the actual Graph call to a
@@ -92,6 +93,53 @@ class WhatsappSender
             // rather than a row of variable placeholders.
             'body' => self::previewOf($store, $templateName, $language, $params),
             'payload' => ['language' => $language, 'params' => array_values($params)],
+            'status' => 'queued',
+        ]);
+
+        SendWhatsappMessage::dispatch($message->id);
+
+        return $message;
+    }
+
+    /**
+     * Send the invoice PDF itself.
+     *
+     * Inside the 24-hour window the file can go as a plain document. Outside it,
+     * Meta only accepts an approved template, and the file rides along in that
+     * template's document header.
+     */
+    public static function queueInvoicePdf(
+        Store $store,
+        string $waId,
+        Order $order,
+        ?string $templateName = null,
+        string $language = 'en',
+        array $params = [],
+        ?Customer $customer = null,
+        ?User $sender = null
+    ): WhatsappMessage {
+        $conversation = self::conversationFor($store, $waId, $customer);
+        $filename = InvoicePdf::filename($order);
+
+        $message = WhatsappMessage::create([
+            'store_id' => $store->id,
+            'whatsapp_conversation_id' => $conversation->id,
+            'order_id' => $order->id,
+            'user_id' => $sender?->id,
+            'direction' => 'outbound',
+            'type' => 'document',
+            'template_name' => $templateName,
+            'body' => $templateName
+                ? self::previewOf($store, $templateName, $language, $params)
+                : "Invoice {$order->order_number}",
+            'payload' => [
+                'language' => $language,
+                'params' => array_values($params),
+                'filename' => $filename,
+                // The job renders and uploads the PDF; holding bytes in the
+                // queue payload would bloat every row.
+                'attach_invoice_for_order' => $order->id,
+            ],
             'status' => 'queued',
         ]);
 

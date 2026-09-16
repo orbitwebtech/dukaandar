@@ -13,8 +13,9 @@ const STARTERS = [
     {
         label: 'Invoice',
         name: 'invoice_ready',
-        body: 'Hello {{1}}, thank you for shopping with {{2}}. Your invoice for order {{3}} is here: {{4}}',
-        examples: ['Priya', 'Shivam Fashion', 'ORD-0042', 'https://example.com/i/42'],
+        body: 'Hello {{1}}, thank you for shopping with {{2}}. Your invoice for order {{3}} is attached.',
+        examples: ['Priya', 'Shivam Fashion', 'ORD-0042'],
+        attach_pdf: true,
         footer: 'Reply here if you have any questions.',
     },
     {
@@ -41,6 +42,7 @@ export default function WhatsappTemplates({ templates = [], connected = false })
         category: 'UTILITY',
         body: '',
         footer: '',
+        attach_pdf: false,
         examples: [],
     });
 
@@ -54,6 +56,7 @@ export default function WhatsappTemplates({ templates = [], connected = false })
             body: starter.body,
             footer: starter.footer,
             examples: starter.examples,
+            attach_pdf: !!starter.attach_pdf,
         });
         setOpen(true);
     }
@@ -250,6 +253,22 @@ export default function WhatsappTemplates({ templates = [], connected = false })
                             </div>
                         </div>
                     )}
+
+                    <label className="flex items-start gap-2 rounded-md border border-gray-200 bg-white p-3">
+                        <input
+                            type="checkbox"
+                            checked={data.attach_pdf}
+                            onChange={(e) => setData('attach_pdf', e.target.checked)}
+                            className="mt-0.5 rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700">
+                            <b>Attach the invoice PDF</b>
+                            <span className="mt-0.5 block text-xs text-gray-500">
+                                The customer receives the invoice as a file they can save, instead of a link.
+                                A sample invoice is sent to Meta so they can review it.
+                            </span>
+                        </span>
+                    </label>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Footer (optional)</label>

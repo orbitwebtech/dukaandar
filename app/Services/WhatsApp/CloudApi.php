@@ -116,10 +116,84 @@ class CloudApi
             ->json() ?: [];
     }
 
-    /** Send an approved template. Valid at any time. */
-    public function sendTemplate(string $to, string $name, string $language, array $bodyParams = []): array
+    /**
+     * Upload a file to the store's number and get a media id back.
+     *
+     * Media ids last 30 days and are scoped to the phone number, which is why
+     * this is preferred over giving Meta a public link to fetch — nothing about
+     * the invoice is exposed on the open web.
+     */
+    public function uploadMedia(string $contents, string $filename, string $mime = 'application/pdf'): string
     {
+        $response = Http::withToken($this->account->access_token)
+            ->timeout(60)
+            ->attach('file', $contents, $filename, ['Content-Type' => $mime])
+            ->post(self::graphUrl("{$this->account->phone_number_id}/media"), [
+                'messaging_product' => 'whatsapp',
+                'type' => $mime,
+            ])
+            ->throw()
+            ->json();
+
+        $id = $response['id'] ?? null;
+
+        if (! $id) {
+            throw new \RuntimeException('Meta accepted the upload but returned no media id.');
+        }
+
+        return $id;
+    }
+
+    /** Send a file on its own. Only valid inside the 24-hour window. */
+    public function sendDocument(string $to, string $mediaId, string $filename, ?string $caption = null): array
+    {
+        $document = ['id' => $mediaId, 'filename' => $filename];
+
+        if ($caption !== null && $caption !== '') {
+            $document['caption'] = $caption;
+        }
+
+        return $this->request()
+            ->post(self::graphUrl("{$this->account->phone_number_id}/messages"), [
+                'messaging_product' => 'whatsapp',
+                'recipient_type' => 'individual',
+                'to' => $to,
+                'type' => 'document',
+                'document' => $document,
+            ])
+            ->throw()
+            ->json() ?: [];
+    }
+
+    /**
+     * Send an approved template. Valid at any time.
+     *
+     * $headerDocument attaches a PDF to a template whose header format is
+     * DOCUMENT — this is the only way to put a file in front of a customer once
+     * the 24-hour window has closed.
+     */
+    public function sendTemplate(
+        string $to,
+        string $name,
+        string $language,
+        array $bodyParams = [],
+        ?array $headerDocument = null
+    ): array {
         $components = [];
+
+        if ($headerDocument) {
+            $components[] = [
+                'type' => 'header',
+                'parameters' => [[
+                    'type' => 'document',
+                    'document' => array_filter([
+                        'id' => $headerDocument['id'] ?? null,
+                        'link' => $headerDocument['link'] ?? null,
+                        'filename' => $headerDocument['filename'] ?? null,
+                    ]),
+                ]],
+            ];
+        }
 
         if ($bodyParams !== []) {
             $components[] = [
@@ -146,6 +220,50 @@ class CloudApi
             ])
             ->throw()
             ->json() ?: [];
+    }
+
+    /**
+     * Upload a sample file for template approval and return its handle.
+     *
+     * A template with a document header cannot be submitted without an example
+     * file, because Meta's reviewers need to see what customers will receive.
+     * This uses the resumable upload API and the app token rather than a
+     * store's token — the sample belongs to the app, not to any one shop.
+     */
+    public static function uploadSampleFile(string $contents, string $filename, string $mime = 'application/pdf'): string
+    {
+        $appId = config('services.meta.app_id');
+        $appToken = $appId . '|' . config('services.meta.app_secret');
+
+        $sessionId = Http::asForm()
+            ->post(self::graphUrl("{$appId}/uploads"), [
+                'file_length' => strlen($contents),
+                'file_type' => $mime,
+                'file_name' => $filename,
+                'access_token' => $appToken,
+            ])
+            ->throw()
+            ->json('id');
+
+        if (! $sessionId) {
+            throw new \RuntimeException('Meta did not start an upload session for the sample file.');
+        }
+
+        $handle = Http::withHeaders([
+            'Authorization' => 'OAuth ' . $appToken,
+            'file_offset' => '0',
+        ])
+            ->withBody($contents, $mime)
+            ->timeout(60)
+            ->post(self::graphUrl($sessionId))
+            ->throw()
+            ->json('h');
+
+        if (! $handle) {
+            throw new \RuntimeException('Meta did not return a file handle for the sample file.');
+        }
+
+        return $handle;
     }
 
     /** Templates live on the WABA, not the phone number. */
