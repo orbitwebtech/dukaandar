@@ -207,7 +207,7 @@ export default function Inbox({ connected, conversations = [], selected = null, 
                                                 }}
                                                 rows={2}
                                                 placeholder="Write a reply…"
-                                                className="w-full resize-none rounded-md border-gray-300 text-sm shadow-sm"
+                                                className="w-full resize-none rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30 outline-none transition"
                                             />
                                             {timeLeft && <p className="mt-1 text-xs text-gray-500">{timeLeft}</p>}
                                         </div>
@@ -241,7 +241,7 @@ export default function Inbox({ connected, conversations = [], selected = null, 
                                                             language: t?.language || 'en',
                                                         });
                                                     }}
-                                                    className="flex-1 rounded-md border-gray-300 text-sm shadow-sm"
+                                                    className="flex-1 rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30 outline-none transition"
                                                 >
                                                     <option value="">Choose a template…</option>
                                                     {templates.map((t) => (

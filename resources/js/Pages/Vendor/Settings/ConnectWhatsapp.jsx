@@ -196,7 +196,7 @@ export default function ConnectWhatsapp({ account = null }) {
                                     onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                     inputMode="numeric"
                                     placeholder="123456"
-                                    className="mt-1 w-32 rounded-md border-amber-300 text-sm shadow-sm"
+                                    className="mt-1 w-32 rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30 outline-none transition"
                                 />
                             </div>
                             <button

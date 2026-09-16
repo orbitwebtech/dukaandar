@@ -417,7 +417,7 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-Bs6axxjb.css",
+    "file": "assets/app-B-B2K9lt.css",
     "name": "app",
     "names": [
       "app.css"
@@ -1079,7 +1079,7 @@
     ]
   },
   "resources/js/Pages/Vendor/Settings/ConnectWhatsapp.jsx": {
-    "file": "assets/ConnectWhatsapp-D3YwtdB7.js",
+    "file": "assets/ConnectWhatsapp-DNHZgaSU.js",
     "name": "ConnectWhatsapp",
     "src": "resources/js/Pages/Vendor/Settings/ConnectWhatsapp.jsx",
     "isDynamicEntry": true,
@@ -1089,7 +1089,7 @@
     ]
   },
   "resources/js/Pages/Vendor/Settings/Index.jsx": {
-    "file": "assets/Index-C_mXCc7B.js",
+    "file": "assets/Index-WLhmbzgM.js",
     "name": "Index",
     "src": "resources/js/Pages/Vendor/Settings/Index.jsx",
     "isDynamicEntry": true,
@@ -1107,17 +1107,20 @@
     ]
   },
   "resources/js/Pages/Vendor/Settings/WhatsappTemplates.jsx": {
-    "file": "assets/WhatsappTemplates-BiFxe55F.js",
+    "file": "assets/WhatsappTemplates-BoQmVq23.js",
     "name": "WhatsappTemplates",
     "src": "resources/js/Pages/Vendor/Settings/WhatsappTemplates.jsx",
     "isDynamicEntry": true,
     "imports": [
       "_jsx-runtime-BhPMO2zw.js",
+      "_Button-B9gpz_l_.js",
+      "_Label-piLlx4T1.js",
+      "_TextInput-BxZuAMS7.js",
       "_storePath-CP_5qn40.js"
     ]
   },
   "resources/js/Pages/Vendor/Whatsapp/Inbox.jsx": {
-    "file": "assets/Inbox-zOjgLxdY.js",
+    "file": "assets/Inbox-C8TwQXSa.js",
     "name": "Inbox",
     "src": "resources/js/Pages/Vendor/Whatsapp/Inbox.jsx",
     "isDynamicEntry": true,
@@ -1128,7 +1131,7 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-BPFcTNuH.js",
+    "file": "assets/app-Ds6ilbWh.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
@@ -1180,7 +1183,7 @@
       "resources/js/Pages/Vendor/Whatsapp/Inbox.jsx"
     ],
     "css": [
-      "assets/app-Bs6axxjb.css"
+      "assets/app-B-B2K9lt.css"
     ]
   }
 }

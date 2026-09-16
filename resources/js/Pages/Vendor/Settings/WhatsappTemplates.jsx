@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import { router, useForm } from '@inertiajs/react';
 import { useStorePath } from '@/lib/storePath';
+import TextInput from '@/Components/TextInput';
+import Label from '@/Components/Label';
+import Button from '@/Components/Button';
+
+// Selects and textareas have no shared component, so they borrow TextInput's
+// styling. Tailwind's preflight zeroes border-width, so `border` must be set
+// explicitly or the control renders with no visible edge at all.
+const CONTROL =
+    'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 ' +
+    'placeholder-gray-400 shadow-sm hover:border-gray-400 focus:border-primary-500 ' +
+    'focus:ring-2 focus:ring-primary-500/30 outline-none transition';
 
 const STATUS_STYLES = {
     APPROVED: 'bg-green-100 text-green-800 border-green-200',
@@ -174,22 +185,21 @@ export default function WhatsappTemplates({ templates = [], connected = false })
 
                     <div className="grid gap-4 sm:grid-cols-3">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Name</label>
-                            <input
+                            <Label>Name</Label>
+                            <TextInput
                                 value={data.name}
                                 onChange={(e) => setData('name', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
                                 placeholder="order_ready"
-                                className="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+                                error={errors.name}
                             />
                             <p className="mt-1 text-xs text-gray-500">Lowercase, no spaces. Customers never see this.</p>
-                            {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Language</label>
+                            <Label>Language</Label>
                             <select
                                 value={data.language}
                                 onChange={(e) => setData('language', e.target.value)}
-                                className="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+                                className={CONTROL}
                             >
                                 <option value="en">English</option>
                                 <option value="en_GB">English (UK)</option>
@@ -199,11 +209,11 @@ export default function WhatsappTemplates({ templates = [], connected = false })
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Type</label>
+                            <Label>Type</Label>
                             <select
                                 value={data.category}
                                 onChange={(e) => setData('category', e.target.value)}
-                                className="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+                                className={CONTROL}
                             >
                                 <option value="UTILITY">About an order (cheaper)</option>
                                 <option value="MARKETING">Offer or promotion</option>
@@ -212,13 +222,13 @@ export default function WhatsappTemplates({ templates = [], connected = false })
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Message</label>
+                        <Label>Message</Label>
                         <textarea
                             value={data.body}
                             onChange={(e) => setData('body', e.target.value)}
                             rows={4}
                             placeholder="Hello {{1}}, your order {{2}} is ready."
-                            className="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+                            className={CONTROL}
                         />
                         <p className="mt-1 text-xs text-gray-500">
                             Use <code className="rounded bg-gray-200 px-1">{'{{1}}'}</code>,{' '}
@@ -230,9 +240,7 @@ export default function WhatsappTemplates({ templates = [], connected = false })
 
                     {placeholders > 0 && (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Example values
-                            </label>
+                            <Label>Example values</Label>
                             <p className="mb-2 text-xs text-gray-500">
                                 Meta rejects templates it cannot see filled in. Give a realistic value for each blank.
                             </p>
@@ -247,7 +255,7 @@ export default function WhatsappTemplates({ templates = [], connected = false })
                                             setData('examples', next);
                                         }}
                                         placeholder={`Value for {{${i + 1}}}`}
-                                        className="rounded-md border-gray-300 text-sm shadow-sm"
+                                        className={CONTROL}
                                     />
                                 ))}
                             </div>
@@ -259,7 +267,7 @@ export default function WhatsappTemplates({ templates = [], connected = false })
                             type="checkbox"
                             checked={data.attach_pdf}
                             onChange={(e) => setData('attach_pdf', e.target.checked)}
-                            className="mt-0.5 rounded border-gray-300"
+                            className="mt-0.5 h-4 w-4 rounded border border-gray-300 text-primary-600 focus:ring-2 focus:ring-primary-500/30"
                         />
                         <span className="text-sm text-gray-700">
                             <b>Attach the invoice PDF</b>
@@ -271,30 +279,22 @@ export default function WhatsappTemplates({ templates = [], connected = false })
                     </label>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Footer (optional)</label>
+                        <Label>Footer (optional)</Label>
                         <input
                             value={data.footer}
                             onChange={(e) => setData('footer', e.target.value)}
                             maxLength={60}
-                            className="mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+                            className={CONTROL}
                         />
                     </div>
 
                     <div className="flex justify-end gap-2">
-                        <button
-                            type="button"
-                            onClick={() => { reset(); setOpen(false); }}
-                            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                        >
+                        <Button type="button" variant="secondary" onClick={() => { reset(); setOpen(false); }}>
                             Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={processing}
-                            className="rounded-md bg-green-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                        >
-                            {processing ? 'Sending…' : 'Send for approval'}
-                        </button>
+                        </Button>
+                        <Button type="submit" loading={processing}>
+                            Send for approval
+                        </Button>
                     </div>
                 </form>
             )}
