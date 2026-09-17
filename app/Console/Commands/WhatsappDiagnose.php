@@ -137,6 +137,42 @@ class WhatsappDiagnose extends Command
             }
         }
 
+        // 6. What actually happened to recent messages. "accepted" means Meta
+        // took it; only a delivery webhook proves it reached the customer.
+        $this->line('');
+        $this->comment('Recent messages');
+
+        $recent = \App\Models\WhatsappMessage::where('store_id', $store->id)
+            ->latest('id')
+            ->limit(8)
+            ->get();
+
+        if ($recent->isEmpty()) {
+            $this->line('  None yet.');
+        }
+
+        foreach ($recent as $m) {
+            $this->line(sprintf(
+                '  #%-4s %-8s %-10s %-10s %s',
+                $m->id,
+                $m->direction,
+                $m->type,
+                $m->status,
+                $m->error_message ? '— ' . $m->error_message : ''
+            ));
+        }
+
+        $stuck = $recent->where('direction', 'outbound')->where('status', 'accepted');
+
+        if ($stuck->isNotEmpty()) {
+            $this->line('');
+            $this->comment('Some messages are still "accepted", meaning Meta took them but has not');
+            $this->comment('reported delivery. If that persists for more than a minute or two:');
+            $this->line('  - the delivery report needs the "messages" webhook field subscribed');
+            $this->line('  - or Meta is holding it: a missing payment method is the usual reason,');
+            $this->line('    and it surfaces as error 131042 once the report arrives');
+        }
+
         $this->report($problems);
 
         return $problems === [] ? self::SUCCESS : self::FAILURE;
