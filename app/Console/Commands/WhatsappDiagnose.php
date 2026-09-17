@@ -231,6 +231,47 @@ class WhatsappDiagnose extends Command
             $this->line('  <error>Could not read subscriptions: ' . $this->metaError($e) . '</error>');
         }
 
+        // 5d. Subscribing the account is only half of it. The app itself needs a
+        // callback URL and the messages field, or Meta has nowhere to deliver
+        // the reports to and sends nothing while everything else looks correct.
+        $this->line('');
+        $this->comment('App callback URL');
+
+        try {
+            $appId = config('services.meta.app_id');
+            $subscriptions = Http::get(CloudApi::graphUrl("{$appId}/subscriptions"), [
+                'access_token' => $appId . '|' . config('services.meta.app_secret'),
+            ])->throw()->json('data') ?: [];
+
+            $whatsapp = collect($subscriptions)
+                ->firstWhere('object', 'whatsapp_business_account');
+
+            if (! $whatsapp) {
+                $this->line('  <error>No callback URL is configured for WhatsApp on this app.</error>');
+                $problems[] = 'The app has no WhatsApp callback URL, so Meta sends no webhooks. Set it in the App '
+                    . 'Dashboard under WhatsApp > Configuration: https://' . request()->getHost() . '/webhooks/whatsapp '
+                    . 'with your META_WEBHOOK_VERIFY_TOKEN, and tick the "messages" field.';
+            } else {
+                $fields = collect($whatsapp['fields'] ?? [])->pluck('name')->all();
+
+                $this->line(sprintf('  %-28s %s', 'Callback URL', $whatsapp['callback_url'] ?? '(none)'));
+                $this->line(sprintf('  %-28s %s', 'Active', ($whatsapp['active'] ?? false) ? 'yes' : 'no'));
+                $this->line(sprintf('  %-28s %s', 'Fields', $fields ? implode(', ', $fields) : '(none)'));
+
+                if (! in_array('messages', $fields, true)) {
+                    $problems[] = 'The "messages" field is not subscribed, so no delivery reports and no incoming '
+                        . 'messages arrive. Tick it in the App Dashboard under WhatsApp > Configuration.';
+                }
+
+                if (! ($whatsapp['active'] ?? false)) {
+                    $problems[] = 'The webhook subscription is inactive. Meta disables it after repeated failures — '
+                        . 're-save the callback URL in the App Dashboard to switch it back on.';
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->line('  <error>Could not read the app subscription: ' . $this->metaError($e) . '</error>');
+        }
+
         // 6. What actually happened to recent messages. "accepted" means Meta
         // took it; only a delivery webhook proves it reached the customer.
         $this->line('');
