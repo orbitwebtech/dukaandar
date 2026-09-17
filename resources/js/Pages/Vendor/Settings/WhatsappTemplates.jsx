@@ -76,7 +76,12 @@ export default function WhatsappTemplates({ templates = [], connected = false })
     const [crashed, setCrashed] = useState(null);
 
     function submit(e) {
-        e.preventDefault();
+        // Called from a button click, not a form submit: this panel is rendered
+        // inside the Settings page's own <form>, and a nested form's submit
+        // button fires the outer form instead — which silently saved settings
+        // and never created the template.
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
         setCrashed(null);
         post(url('/settings/whatsapp/templates'), {
             preserveScroll: true,
@@ -189,7 +194,7 @@ export default function WhatsappTemplates({ templates = [], connected = false })
             )}
 
             {open && (
-                <form onSubmit={submit} className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div ref={errorRef}>
                         {errors.template && (
                             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -317,11 +322,11 @@ export default function WhatsappTemplates({ templates = [], connected = false })
                         <Button type="button" variant="secondary" onClick={() => { reset(); setOpen(false); }}>
                             Cancel
                         </Button>
-                        <Button type="submit" loading={processing}>
+                        <Button type="button" loading={processing} onClick={submit}>
                             Send for approval
                         </Button>
                     </div>
-                </form>
+                </div>
             )}
         </div>
     );
