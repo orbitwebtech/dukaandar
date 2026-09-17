@@ -66,6 +66,10 @@ class SendWhatsappMessage implements ShouldQueue
             'wamid' => $wamid,
             'status' => 'accepted',
             'sent_at' => now(),
+            // Clear the reason an earlier attempt failed, or a message that
+            // succeeded on retry keeps displaying the error it recovered from.
+            'error_code' => null,
+            'error_message' => null,
         ]);
 
         $message->conversation->update(['last_message_at' => now()]);
