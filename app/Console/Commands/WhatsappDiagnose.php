@@ -137,6 +137,60 @@ class WhatsappDiagnose extends Command
             }
         }
 
+        // 5b. Account standing. A number can be CONNECTED and still be barred
+        // from messaging anyone outside a verified list, which Meta accepts and
+        // then silently drops — indistinguishable from success at the API.
+        $this->line('');
+        $this->comment('Account standing');
+
+        try {
+            $waba = Http::withToken($account->access_token)
+                ->get(CloudApi::graphUrl($account->waba_id), [
+                    'fields' => 'account_review_status,name,on_behalf_of_business_info,business_verification_status',
+                ])
+                ->throw()
+                ->json();
+
+            $review = $waba['account_review_status'] ?? 'unknown';
+            $this->line(sprintf('  %-28s %s', 'WABA review status', $review));
+            $this->line(sprintf('  %-28s %s', 'Business verification', $waba['business_verification_status'] ?? 'unknown'));
+
+            if (strtoupper($review) !== 'APPROVED') {
+                $problems[] = "The WhatsApp Business Account review status is '{$review}'. Until it is APPROVED, "
+                    . 'messages can only reach numbers added as verified recipients in the Meta dashboard — '
+                    . 'Meta accepts anything else and never delivers it.';
+            }
+        } catch (\Throwable $e) {
+            $this->line('  <error>Could not read the account: ' . $this->metaError($e) . '</error>');
+        }
+
+        try {
+            $numbers = Http::withToken($account->access_token)
+                ->get(CloudApi::graphUrl("{$account->waba_id}/phone_numbers"), [
+                    'fields' => 'display_phone_number,quality_rating,messaging_limit_tier,status,name_status',
+                ])
+                ->throw()
+                ->json('data') ?: [];
+
+            foreach ($numbers as $number) {
+                $this->line(sprintf(
+                    '  %-28s %s  tier: %s  name: %s',
+                    $number['display_phone_number'] ?? '?',
+                    $number['status'] ?? '?',
+                    $number['messaging_limit_tier'] ?? 'none',
+                    $number['name_status'] ?? '?'
+                ));
+
+                if (($number['messaging_limit_tier'] ?? null) === null && ($number['status'] ?? '') === 'CONNECTED') {
+                    $problems[] = 'This number has no messaging limit tier, which means it is not yet cleared to '
+                        . 'message the general public. Add the recipient as a verified test number, or complete '
+                        . 'business verification to lift the restriction.';
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->line('  <error>Could not read the numbers: ' . $this->metaError($e) . '</error>');
+        }
+
         // 6. What actually happened to recent messages. "accepted" means Meta
         // took it; only a delivery webhook proves it reached the customer.
         $this->line('');
