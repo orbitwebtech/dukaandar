@@ -1089,7 +1089,7 @@
     ]
   },
   "resources/js/Pages/Vendor/Settings/Index.jsx": {
-    "file": "assets/Index-WLhmbzgM.js",
+    "file": "assets/Index-CwrzqNIU.js",
     "name": "Index",
     "src": "resources/js/Pages/Vendor/Settings/Index.jsx",
     "isDynamicEntry": true,
@@ -1107,7 +1107,7 @@
     ]
   },
   "resources/js/Pages/Vendor/Settings/WhatsappTemplates.jsx": {
-    "file": "assets/WhatsappTemplates-BoQmVq23.js",
+    "file": "assets/WhatsappTemplates-DNWwgTdw.js",
     "name": "WhatsappTemplates",
     "src": "resources/js/Pages/Vendor/Settings/WhatsappTemplates.jsx",
     "isDynamicEntry": true,
@@ -1131,7 +1131,7 @@
     ]
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-Ds6ilbWh.js",
+    "file": "assets/app-CKfiH3ad.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,

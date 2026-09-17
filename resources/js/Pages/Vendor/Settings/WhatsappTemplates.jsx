@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { router, useForm } from '@inertiajs/react';
 import { useStorePath } from '@/lib/storePath';
 import TextInput from '@/Components/TextInput';
@@ -72,14 +72,27 @@ export default function WhatsappTemplates({ templates = [], connected = false })
         setOpen(true);
     }
 
+    const errorRef = useRef(null);
+    const [crashed, setCrashed] = useState(null);
+
     function submit(e) {
         e.preventDefault();
+        setCrashed(null);
         post(url('/settings/whatsapp/templates'), {
             preserveScroll: true,
             onSuccess: () => {
                 reset();
                 setOpen(false);
             },
+            onError: () => {
+                // An error above the fold is an error nobody reads.
+                requestAnimationFrame(() => {
+                    errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+            },
+            // Fires when the request never came back cleanly — a timeout or a
+            // server error rather than a rejection from Meta.
+            onException: (error) => setCrashed(String(error?.message || error)),
         });
     }
 
@@ -177,11 +190,23 @@ export default function WhatsappTemplates({ templates = [], connected = false })
 
             {open && (
                 <form onSubmit={submit} className="space-y-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    {errors.template && (
-                        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                            {errors.template}
-                        </div>
-                    )}
+                    <div ref={errorRef}>
+                        {errors.template && (
+                            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                                {errors.template}
+                            </div>
+                        )}
+                        {crashed && (
+                            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                                The server did not finish this request: {crashed}.
+                                <span className="mt-1 block text-xs">
+                                    This usually means it ran out of time or memory. Ask your administrator to run
+                                    <code className="mx-1 rounded bg-red-100 px-1">artisan whatsapp:template</code>
+                                    which does the same thing without a time limit.
+                                </span>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="grid gap-4 sm:grid-cols-3">
                         <div>

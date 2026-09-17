@@ -57,11 +57,27 @@ class WhatsappTemplateController extends Controller
         // A document header is what lets the invoice PDF itself reach the
         // customer. Meta will not review one without a sample file to look at.
         if (! empty($validated['attach_pdf'])) {
+            // Rendering and uploading both talk to slow things. Shared hosting
+            // defaults are tight enough to kill the request mid-way, which
+            // leaves no error anywhere — the failure we spent a day chasing.
+            @set_time_limit(120);
+
             try {
-                $handle = CloudApi::uploadSampleFile(
-                    InvoicePdf::sampleBytes($store),
-                    'sample-invoice.pdf'
-                );
+                Log::info('WhatsApp template: building sample invoice', [
+                    'store_id' => $store->id,
+                    'template' => $validated['name'],
+                ]);
+
+                $sample = InvoicePdf::sampleBytes($store);
+
+                Log::info('WhatsApp template: uploading sample', [
+                    'store_id' => $store->id,
+                    'bytes' => strlen($sample),
+                ]);
+
+                $handle = CloudApi::uploadSampleFile($sample, 'sample-invoice.pdf');
+
+                Log::info('WhatsApp template: sample uploaded', ['store_id' => $store->id]);
             } catch (\Throwable $e) {
                 Log::warning('WhatsApp sample invoice upload failed', [
                     'store_id' => $store->id,

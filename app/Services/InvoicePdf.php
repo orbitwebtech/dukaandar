@@ -41,19 +41,17 @@ class InvoicePdf
      */
     public static function sampleBytes(Store $store): string
     {
-        $latest = $store->orders()
-            ->with('customer', 'items.product', 'items.variant', 'store')
-            ->latest('id')
-            ->first();
-
-        if ($latest) {
-            return self::bytes($latest);
-        }
-
+        // Deliberately not the real invoice view. That renders around 850 KB
+        // because dompdf embeds full font files, and uploading it inside a web
+        // request is enough to exhaust memory on shared hosting. A reviewer only
+        // needs to see a representative document, and this one is ~1 KB.
         $shopName = e($store->getSetting('shop_name', $store->name));
 
         return Pdf::loadHTML(<<<HTML
-            <html><body style="font-family: DejaVu Sans, sans-serif; padding: 40px;">
+            <!-- sans-serif maps to a core PDF font. Naming DejaVu here would
+                 make dompdf embed the whole font file and push a one-page
+                 sample past 850 KB, which is what broke the upload. -->
+            <html><body style="font-family: sans-serif; padding: 40px;">
                 <h2 style="margin:0 0 4px">{$shopName}</h2>
                 <p style="margin:0 0 24px; color:#555">Tax Invoice &middot; ORD-0001</p>
                 <table width="100%" cellpadding="6" style="border-collapse: collapse">
