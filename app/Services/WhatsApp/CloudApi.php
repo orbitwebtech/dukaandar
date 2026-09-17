@@ -177,7 +177,8 @@ class CloudApi
         string $name,
         string $language,
         array $bodyParams = [],
-        ?array $headerDocument = null
+        ?array $headerDocument = null,
+        ?array $urlButton = null
     ): array {
         $components = [];
 
@@ -202,6 +203,17 @@ class CloudApi
                     fn ($value) => ['type' => 'text', 'text' => (string) $value],
                     array_values($bodyParams)
                 ),
+            ];
+        }
+
+        // A URL button with a variable is its own required parameter, and
+        // Meta wants only the part of the link that follows the fixed prefix.
+        if ($urlButton) {
+            $components[] = [
+                'type' => 'button',
+                'sub_type' => 'url',
+                'index' => (string) ($urlButton['index'] ?? 0),
+                'parameters' => [['type' => 'text', 'text' => (string) $urlButton['text']]],
             ];
         }
 

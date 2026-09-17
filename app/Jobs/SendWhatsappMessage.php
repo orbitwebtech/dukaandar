@@ -3,8 +3,10 @@
 namespace App\Jobs;
 
 use App\Models\Order;
+use App\Models\WhatsappTemplate;
 use App\Models\WhatsappMessage;
 use App\Services\InvoicePdf;
+use Illuminate\Support\Facades\URL;
 use App\Services\WhatsApp\CloudApi;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -98,11 +100,44 @@ class SendWhatsappMessage implements ShouldQueue
                 $message->template_name,
                 $message->payload['language'] ?? 'en',
                 $message->payload['params'] ?? [],
-                ['id' => $mediaId, 'filename' => $filename]
+                ['id' => $mediaId, 'filename' => $filename],
+                $this->urlButtonFor($message, $order)
             );
         }
 
         return $api->sendDocument($to, $mediaId, $filename, (string) $message->body);
+    }
+
+    /**
+     * The value a URL button expects, if the template has one.
+     *
+     * Meta stores such a button as a fixed prefix plus a variable, and wants
+     * only the part that follows the prefix — sending the whole link would
+     * produce a doubled URL.
+     */
+    private function urlButtonFor(WhatsappMessage $message, Order $order): ?array
+    {
+        $template = WhatsappTemplate::where('store_id', $message->store_id)
+            ->where('name', $message->template_name)
+            ->first();
+
+        $button = $template?->urlButton();
+
+        if (! $button) {
+            return null;
+        }
+
+        $link = URL::signedRoute('public.invoice', ['order' => $order->id]);
+        $prefix = strstr($button['url'], '{{', true) ?: '';
+
+        $suffix = str_starts_with($link, $prefix)
+            ? substr($link, strlen($prefix))
+            // The button points somewhere other than this site, so fall back to
+            // the path and query rather than sending an unusable absolute URL.
+            : ltrim((string) parse_url($link, PHP_URL_PATH), '/')
+                . (parse_url($link, PHP_URL_QUERY) ? '?' . parse_url($link, PHP_URL_QUERY) : '');
+
+        return ['index' => $button['index'], 'text' => $suffix];
     }
 
     private function handleFailure(WhatsappMessage $message, \Throwable $e): void

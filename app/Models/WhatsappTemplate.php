@@ -44,6 +44,31 @@ class WhatsappTemplate extends Model
         return null;
     }
 
+    /**
+     * A URL button carrying a variable, if the template has one.
+     *
+     * Meta counts such a button as its own required parameter, and the
+     * value it wants is only the part of the link after the fixed prefix.
+     */
+    public function urlButton(): ?array
+    {
+        foreach ($this->components ?? [] as $component) {
+            if (strtoupper($component['type'] ?? '') !== 'BUTTONS') {
+                continue;
+            }
+
+            foreach ($component['buttons'] ?? [] as $i => $button) {
+                $url = (string) ($button['url'] ?? '');
+
+                if (strtoupper($button['type'] ?? '') === 'URL' && str_contains($url, '{{')) {
+                    return ['index' => $i, 'url' => $url];
+                }
+            }
+        }
+
+        return null;
+    }
+
     /** The header format Meta expects, if any: DOCUMENT, IMAGE, TEXT… */
     public function headerFormat(): ?string
     {
