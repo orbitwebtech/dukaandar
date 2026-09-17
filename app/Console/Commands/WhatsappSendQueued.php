@@ -69,8 +69,31 @@ class WhatsappSendQueued extends Command
 
                     $this->line('  our copy expects ' . $template->variableCount() . ' value(s)'
                         . ', header: ' . ($template->headerFormat() ?? 'none'));
-                    $this->line('  body: ' . ($body ? mb_strimwidth($body, 0, 70, '…') : '(empty — never refreshed from Meta)'));
+                    $this->line('  body: ' . ($body ? mb_strimwidth(str_replace("\n", ' ', $body), 0, 70, '…') : '(empty — never refreshed from Meta)'));
                     $this->line('  sending ' . count($message->payload['params'] ?? []) . ' value(s)');
+
+                    // Every component Meta declares can demand its own
+                    // parameter, and a button with a variable is the usual
+                    // culprit behind "required parameter is missing".
+                    foreach ($template->components ?? [] as $component) {
+                        $type = strtoupper($component['type'] ?? '?');
+
+                        if ($type !== 'BUTTONS') {
+                            $this->line("    component: {$type} " . ($component['format'] ?? ''));
+
+                            continue;
+                        }
+
+                        foreach ($component['buttons'] ?? [] as $i => $button) {
+                            $this->line(sprintf(
+                                '    button %d: %s  %s%s',
+                                $i,
+                                strtoupper($button['type'] ?? '?'),
+                                $button['text'] ?? '',
+                                isset($button['url']) ? '  url=' . $button['url'] : ''
+                            ));
+                        }
+                    }
                 }
             }
 
