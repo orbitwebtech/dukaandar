@@ -50,6 +50,7 @@ class SettingController extends Controller
             'gst_number', 'prices_include_tax', 'google_review_link', 'instagram_handle',
             'invoice_prefix', 'invoice_footer', 'whatsapp_template', 'show_cost_price',
             'review_text', 'review_reprompt_interval',
+            'whatsapp_invoice_template',
             'slow_moving_days', 'primary_color',
         ];
 

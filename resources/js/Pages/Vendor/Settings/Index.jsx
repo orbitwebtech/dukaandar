@@ -487,7 +487,11 @@ export default function Settings({ settings = {}, tenant = {}, whatsappAccount =
                         <CardHeader title="WhatsApp" subtitle="Reply to customers from inside Dukaandar" />
                         <ConnectWhatsapp account={whatsappAccount} />
                         <div className="mt-8 border-t border-gray-200 pt-6">
-                            <WhatsappTemplates templates={whatsappTemplates} connected={whatsappAccount?.status === 'connected'} />
+                            <WhatsappTemplates
+                                templates={whatsappTemplates}
+                                connected={whatsappAccount?.status === 'connected'}
+                                invoiceTemplateSetting={settings.whatsapp_invoice_template || ''}
+                            />
                         </div>
                     </Card>
                 )}

@@ -52,6 +52,17 @@ class WhatsappMessageController extends Controller
                 ->first()
             : null;
 
+        // Nothing chosen, or the chosen one is gone: fall back to any approved
+        // template, preferring one that carries the PDF. A shop with exactly one
+        // approved invoice template should not have to configure anything.
+        if (! $template) {
+            $template = $store->whatsappTemplates()
+                ->where('status', 'APPROVED')
+                ->get()
+                ->sortByDesc(fn ($t) => $t->hasDocumentHeader() ? 1 : 0)
+                ->first();
+        }
+
         $caption = $this->fillTemplate(
             (string) $store->getSetting('whatsapp_template'),
             $customer?->name,

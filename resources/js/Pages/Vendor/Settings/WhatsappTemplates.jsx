@@ -43,9 +43,11 @@ function countPlaceholders(body) {
     return found.length ? Math.max(...found) : 0;
 }
 
-export default function WhatsappTemplates({ templates = [], connected = false }) {
+export default function WhatsappTemplates({ templates = [], connected = false, invoiceTemplateSetting = '' }) {
     const url = useStorePath();
     const [open, setOpen] = useState(false);
+    const [invoiceTemplate, setInvoiceTemplate] = useState(invoiceTemplateSetting || '');
+    const approved = templates.filter((t) => t.status === 'APPROVED');
 
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
@@ -135,6 +137,43 @@ export default function WhatsappTemplates({ templates = [], connected = false })
                     </button>
                 </div>
             </div>
+
+            {approved.length > 0 && (
+                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                    <Label>Template used when sending an invoice</Label>
+                    <p className="mb-2 text-xs text-gray-500">
+                        Used when the customer has not messaged in the last 24 hours. Inside that window
+                        the invoice is sent as a normal message, so no template is needed.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <select
+                            value={invoiceTemplate}
+                            onChange={(e) => setInvoiceTemplate(e.target.value)}
+                            className={`${CONTROL} sm:max-w-sm`}
+                        >
+                            <option value="">Choose automatically</option>
+                            {approved.map((t) => (
+                                <option key={`${t.name}-${t.language}`} value={t.name}>
+                                    {t.name} {t.language !== 'en' ? `(${t.language})` : ''}
+                                </option>
+                            ))}
+                        </select>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() =>
+                                router.post(
+                                    url('/settings'),
+                                    { whatsapp_invoice_template: invoiceTemplate },
+                                    { preserveScroll: true }
+                                )
+                            }
+                        >
+                            Save
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {templates.length === 0 && !open && (
                 <div className="rounded-lg border border-dashed border-gray-300 p-5 text-center">
