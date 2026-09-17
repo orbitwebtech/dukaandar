@@ -191,6 +191,46 @@ class WhatsappDiagnose extends Command
             $this->line('  <error>Could not read the numbers: ' . $this->metaError($e) . '</error>');
         }
 
+        // 5c. Webhooks only flow to apps subscribed to the account. Without
+        // this, sends still succeed and no delivery report ever arrives — the
+        // exact shape of "it says sent but nothing happened".
+        $this->line('');
+        $this->comment('Webhook subscription');
+
+        try {
+            $apps = Http::withToken($account->access_token)
+                ->get(CloudApi::graphUrl("{$account->waba_id}/subscribed_apps"))
+                ->throw()
+                ->json('data') ?: [];
+
+            if ($apps === []) {
+                $this->line('  <error>No app is subscribed to this account.</error>');
+                $problems[] = 'No app is subscribed to this WhatsApp account, so Meta sends no webhooks at all. '
+                    . 'Re-run whatsapp:link for this store, which subscribes it.';
+            }
+
+            foreach ($apps as $app) {
+                $id = $app['whatsapp_business_api_data']['id'] ?? '?';
+                $name = $app['whatsapp_business_api_data']['name'] ?? '?';
+                $ours = $id === (string) config('services.meta.app_id');
+
+                $this->line(sprintf('  %-28s %s %s', $name, $id, $ours ? '(ours)' : ''));
+
+                if (! $ours) {
+                    continue;
+                }
+            }
+
+            $ids = array_map(fn ($a) => $a['whatsapp_business_api_data']['id'] ?? '', $apps);
+
+            if ($apps !== [] && ! in_array((string) config('services.meta.app_id'), $ids, true)) {
+                $problems[] = 'This account sends its webhooks to a different app, not '
+                    . config('services.meta.app_id') . '. Re-run whatsapp:link to subscribe ours.';
+            }
+        } catch (\Throwable $e) {
+            $this->line('  <error>Could not read subscriptions: ' . $this->metaError($e) . '</error>');
+        }
+
         // 6. What actually happened to recent messages. "accepted" means Meta
         // took it; only a delivery webhook proves it reached the customer.
         $this->line('');
