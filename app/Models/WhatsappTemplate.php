@@ -19,6 +19,14 @@ class WhatsappTemplate extends Model
         return $this->belongsTo(Store::class);
     }
 
+    /** How many {{n}} blanks the body declares — the count Meta expects. */
+    public function variableCount(): int
+    {
+        preg_match_all('/\{\{\s*(\d+)\s*\}\}/', (string) $this->body, $m);
+
+        return $m[1] ? max(array_map('intval', $m[1])) : 0;
+    }
+
     /** Does this template expect a PDF attached to its header? */
     public function hasDocumentHeader(): bool
     {

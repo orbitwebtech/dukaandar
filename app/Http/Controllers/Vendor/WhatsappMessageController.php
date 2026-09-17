@@ -88,7 +88,27 @@ class WhatsappMessageController extends Controller
             ]);
         }
 
-        $params = [$customer?->name ?? 'Customer', $order->order_number, $shopName];
+        // Meta rejects the send outright if the count does not match the
+        // template exactly (#132000), and templates written in WhatsApp Manager
+        // declare whatever their author chose. So follow the template rather
+        // than assuming our own shape.
+        $pool = [
+            $customer?->name ?? 'Customer',
+            $order->order_number,
+            $shopName,
+            $invoiceLink,
+        ];
+
+        $needed = $template->variableCount();
+
+        if ($needed > count($pool)) {
+            return back()->withErrors([
+                'whatsapp' => "The template \"{$template->name}\" expects {$needed} values, but an invoice only provides " . count($pool)
+                    . ' (customer name, order number, shop name, invoice link). Simplify the template or choose another in Settings → WhatsApp.',
+            ]);
+        }
+
+        $params = array_slice($pool, 0, $needed);
 
         if ($template->hasDocumentHeader()) {
             // The template carries a PDF header, so attach the real invoice.
@@ -97,11 +117,18 @@ class WhatsappMessageController extends Controller
                 $params, $customer, $request->user()
             );
         } else {
-            // Text-only template: the customer gets the invoice as a link.
+            // Text-only template: the customer gets the invoice as a link. The
+            // link matters more here than the shop name, so it takes the third
+            // slot — otherwise a three-variable template would omit it.
+            $textParams = array_slice(
+                [$customer?->name ?? 'Customer', $order->order_number, $invoiceLink, $shopName],
+                0,
+                $needed
+            );
+
             WhatsappSender::queueTemplate(
                 $store, $waId, $template->name, $template->language,
-                [$customer?->name ?? 'Customer', $order->order_number, $invoiceLink],
-                $customer, $request->user(), $order
+                $textParams, $customer, $request->user(), $order
             );
         }
 
