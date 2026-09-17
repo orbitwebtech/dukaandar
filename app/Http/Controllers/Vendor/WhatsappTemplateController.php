@@ -187,15 +187,20 @@ class WhatsappTemplateController extends Controller
             return back()->withErrors(['template' => 'Could not reach Meta: ' . $e->getMessage()]);
         }
 
+        $seen = [];
+
         foreach ($templates as $t) {
             $body = collect($t['components'] ?? [])
                 ->firstWhere('type', 'BODY')['text'] ?? null;
+
+            $language = $t['language'] ?? 'en';
+            $seen[] = $t['name'] . '|' . $language;
 
             WhatsappTemplate::updateOrCreate(
                 [
                     'store_id' => $store->id,
                     'name' => $t['name'],
-                    'language' => $t['language'] ?? 'en',
+                    'language' => $language,
                 ],
                 [
                     'meta_id' => $t['id'] ?? null,
@@ -208,7 +213,23 @@ class WhatsappTemplateController extends Controller
             );
         }
 
-        return back()->with('success', count($templates) . ' template(s) synced from Meta.');
+        // Meta is the source of truth, so a refresh mirrors rather than merges.
+        // Without this, a template deleted in WhatsApp Manager stays here still
+        // marked APPROVED, keeps being offered in the inbox, and fails on send.
+        $removed = WhatsappTemplate::where('store_id', $store->id)
+            ->get()
+            ->reject(fn ($t) => in_array($t->name . '|' . $t->language, $seen, true))
+            ->each->delete()
+            ->count();
+
+        $message = count($templates) . ' template(s) synced from Meta.';
+
+        if ($removed > 0) {
+            $message .= " {$removed} removed here because " .
+                ($removed === 1 ? 'it no longer exists' : 'they no longer exist') . ' at Meta.';
+        }
+
+        return back()->with('success', $message);
     }
 
     private function placeholderCount(string $body): int

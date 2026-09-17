@@ -154,12 +154,23 @@ class ProcessWhatsappWebhook implements ShouldQueue
             return;
         }
 
-        WhatsappTemplate::where('store_id', $account->store_id)
-            ->where('name', $value['message_template_name'] ?? '')
-            ->update([
-                'status' => $value['event'] ?? 'PENDING',
-                'rejected_reason' => $value['reason'] ?? null,
-            ]);
+        $event = strtoupper((string) ($value['event'] ?? 'PENDING'));
+
+        $query = WhatsappTemplate::where('store_id', $account->store_id)
+            ->where('name', $value['message_template_name'] ?? '');
+
+        // A template deleted at Meta cannot be sent, so it should not survive
+        // here offering itself in the template picker.
+        if ($event === 'DELETED') {
+            $query->delete();
+
+            return;
+        }
+
+        $query->update([
+            'status' => $event,
+            'rejected_reason' => $value['reason'] ?? null,
+        ]);
     }
 
     private function conversationFor(WhatsappAccount $account, string $waId, ?string $profileName): WhatsappConversation
