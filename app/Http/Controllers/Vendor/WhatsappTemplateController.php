@@ -44,6 +44,14 @@ class WhatsappTemplateController extends Controller
         $placeholders = $this->placeholderCount($validated['body']);
         $examples = array_values(array_filter($validated['examples'] ?? []));
 
+        // Meta requires variables to start at {{1}} and run without gaps. A body
+        // using only {{2}} is rejected, and a review cycle is wasted finding out.
+        if ($gap = $this->firstMissingPlaceholder($validated['body'], $placeholders)) {
+            return back()->withErrors([
+                'template' => "This message uses {{{$placeholders}}} but not {{{$gap}}}. WhatsApp needs the blanks numbered in order, starting at {{1}} — renumber them and try again.",
+            ]);
+        }
+
         // Meta cannot review a template whose variables it can't see filled in,
         // so a missing example is the single most common rejection.
         if (count($examples) < $placeholders) {
@@ -199,5 +207,20 @@ class WhatsappTemplateController extends Controller
         preg_match_all('/\{\{\s*(\d+)\s*\}\}/', $body, $matches);
 
         return $matches[1] ? max(array_map('intval', $matches[1])) : 0;
+    }
+
+    /** The lowest number between 1 and the highest used that the body skips. */
+    private function firstMissingPlaceholder(string $body, int $highest): ?int
+    {
+        preg_match_all('/\{\{\s*(\d+)\s*\}\}/', $body, $matches);
+        $used = array_map('intval', $matches[1] ?? []);
+
+        for ($i = 1; $i <= $highest; $i++) {
+            if (! in_array($i, $used, true)) {
+                return $i;
+            }
+        }
+
+        return null;
     }
 }
