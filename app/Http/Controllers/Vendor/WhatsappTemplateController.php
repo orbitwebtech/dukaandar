@@ -52,6 +52,15 @@ class WhatsappTemplateController extends Controller
             ]);
         }
 
+        // Meta also refuses a body that opens or closes on a blank.
+        if ($edge = $this->variableAtEdge($validated['body'])) {
+            return back()->withErrors([
+                'template' => $edge === 'start'
+                    ? 'The message cannot begin with a blank. Put some words before it — for example "Hello {{1}}," instead of "{{1}},".'
+                    : 'The message cannot end with a blank. Add a few words after it — for example "Location: {{1}}. See you soon!"',
+            ]);
+        }
+
         // Meta cannot review a template whose variables it can't see filled in,
         // so a missing example is the single most common rejection.
         if (count($examples) < $placeholders) {
@@ -207,6 +216,22 @@ class WhatsappTemplateController extends Controller
         preg_match_all('/\{\{\s*(\d+)\s*\}\}/', $body, $matches);
 
         return $matches[1] ? max(array_map('intval', $matches[1])) : 0;
+    }
+
+    /** Does the body open or close on a variable? Meta refuses both. */
+    private function variableAtEdge(string $body): ?string
+    {
+        $trimmed = trim($body);
+
+        if (preg_match('/^\{\{\s*\d+\s*\}\}/', $trimmed)) {
+            return 'start';
+        }
+
+        if (preg_match('/\{\{\s*\d+\s*\}\}$/', $trimmed)) {
+            return 'end';
+        }
+
+        return null;
     }
 
     /** The lowest number between 1 and the highest used that the body skips. */
