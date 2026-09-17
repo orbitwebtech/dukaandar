@@ -146,6 +146,15 @@ class SendWhatsappMessage implements ShouldQueue
         Log::warning('WhatsApp send failed, will retry', [
             'message_id' => $message->id,
             'code' => $code,
+            'error' => $detail,
+        ]);
+
+        // Keep the reason on the row while it waits. Without this a message that
+        // is retrying looks identical to one nothing has touched, and the only
+        // difference — why — is invisible from the UI and from the database.
+        $message->update([
+            'error_code' => $code,
+            'error_message' => substr('Retrying: ' . $detail, 0, 250),
         ]);
 
         $this->release($this->backoff[$this->attempts() - 1] ?? 30);
