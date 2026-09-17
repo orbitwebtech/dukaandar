@@ -48,6 +48,27 @@ class WhatsappSendQueued extends Command
         foreach ($messages as $message) {
             $this->line("#{$message->id}  {$message->type}  to +{$message->conversation?->wa_id}");
 
+            // A parameter mismatch is almost always our copy of the template
+            // disagreeing with Meta's, so show what we are working from.
+            if ($message->template_name) {
+                $template = \App\Models\WhatsappTemplate::where('store_id', $message->store_id)
+                    ->where('name', $message->template_name)
+                    ->first();
+
+                $this->line("  template: {$message->template_name} ({$message->payload['language']})");
+
+                if (! $template) {
+                    $this->error('  We hold no copy of this template. Press Refresh from Meta in Settings.');
+                } else {
+                    $body = $template->body ?: $template->bodyFromComponents();
+
+                    $this->line('  our copy expects ' . $template->variableCount() . ' value(s)'
+                        . ', header: ' . ($template->headerFormat() ?? 'none'));
+                    $this->line('  body: ' . ($body ? mb_strimwidth($body, 0, 70, '…') : '(empty — never refreshed from Meta)'));
+                    $this->line('  sending ' . count($message->payload['params'] ?? []) . ' value(s)');
+                }
+            }
+
             try {
                 // Straight to handle(), so nothing is swallowed by the queue.
                 (new SendWhatsappMessage($message->id))->handle();

@@ -22,9 +22,38 @@ class WhatsappTemplate extends Model
     /** How many {{n}} blanks the body declares — the count Meta expects. */
     public function variableCount(): int
     {
-        preg_match_all('/\{\{\s*(\d+)\s*\}\}/', (string) $this->body, $m);
+        // The body column can be empty for a template created in WhatsApp
+        // Manager and never refreshed, so fall back to the components Meta
+        // returned. Guessing zero here means sending no parameters at all,
+        // which Meta rejects just as firmly as sending too many.
+        $text = (string) ($this->body ?: $this->bodyFromComponents());
+
+        preg_match_all('/\{\{\s*(\d+)\s*\}\}/', $text, $m);
 
         return $m[1] ? max(array_map('intval', $m[1])) : 0;
+    }
+
+    public function bodyFromComponents(): ?string
+    {
+        foreach ($this->components ?? [] as $component) {
+            if (strtoupper($component['type'] ?? '') === 'BODY') {
+                return $component['text'] ?? null;
+            }
+        }
+
+        return null;
+    }
+
+    /** The header format Meta expects, if any: DOCUMENT, IMAGE, TEXT… */
+    public function headerFormat(): ?string
+    {
+        foreach ($this->components ?? [] as $component) {
+            if (strtoupper($component['type'] ?? '') === 'HEADER') {
+                return strtoupper($component['format'] ?? 'TEXT');
+            }
+        }
+
+        return null;
     }
 
     /** Does this template expect a PDF attached to its header? */
