@@ -18,12 +18,17 @@ class WhatsappSendQueued extends Command
 {
     protected $signature = 'whatsapp:send-queued
                             {--limit=10 : How many to attempt}
-                            {--id= : Send one specific message id}';
+                            {--id= : Send one specific message id}
+                            {--cancel : Give up on queued messages instead of sending them}';
 
     protected $description = 'Send queued WhatsApp messages now and report what happened';
 
     public function handle(): int
     {
+        if ($this->option('cancel')) {
+            return $this->cancel();
+        }
+
         $query = WhatsappMessage::where('direction', 'outbound')
             ->where('status', 'queued')
             ->orderBy('id');
@@ -109,6 +114,40 @@ class WhatsappSendQueued extends Command
             $this->line('  - the access token has expired');
             $this->line('Run whatsapp:diagnose <store-slug> to check those.');
         }
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Stop trying, and say so on the message.
+     *
+     * Clearing the jobs table alone would leave these rows queued forever,
+     * showing "sending…" in the inbox for something nothing will ever send.
+     */
+    private function cancel(): int
+    {
+        $messages = WhatsappMessage::where('direction', 'outbound')
+            ->where('status', 'queued')
+            ->get();
+
+        if ($messages->isEmpty()) {
+            $this->info('Nothing is queued.');
+
+            return self::SUCCESS;
+        }
+
+        foreach ($messages as $message) {
+            $message->update([
+                'status' => 'failed',
+                'error_message' => 'Cancelled before sending.',
+            ]);
+
+            $this->line("  #{$message->id} cancelled");
+        }
+
+        $this->newLine();
+        $this->info($messages->count() . ' message(s) cancelled.');
+        $this->line('The queued jobs themselves are separate — clear those with: artisan queue:clear');
 
         return self::SUCCESS;
     }
