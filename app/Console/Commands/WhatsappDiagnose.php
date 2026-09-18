@@ -95,6 +95,9 @@ class WhatsappDiagnose extends Command
             $this->line(sprintf('  %-28s <info>accepted</info>', 'Access token'));
             $this->line(sprintf('  %-28s %s', 'Number status at Meta', $details['status'] ?? 'unknown'));
             $this->line(sprintf('  %-28s %s', 'Quality', $details['quality_rating'] ?? 'unknown'));
+            // CLOUD_API means the number lives here only. A phone running the
+            // Business app on the same number would read as coexistence.
+            $this->line(sprintf('  %-28s %s', 'Platform', $details['platform_type'] ?? 'unknown'));
         } catch (\Throwable $e) {
             $this->line(sprintf('  %-28s <error>rejected</error>', 'Access token'));
             $this->line('  ' . $this->metaError($e));
