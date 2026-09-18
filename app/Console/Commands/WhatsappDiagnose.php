@@ -272,6 +272,37 @@ class WhatsappDiagnose extends Command
             $this->line('  <error>Could not read the app subscription: ' . $this->metaError($e) . '</error>');
         }
 
+        // 5e. The queue itself. attempts is the field that matters: zero means
+        // nothing has ever picked the job up, so the worker is not running.
+        // Anything higher means it ran and the send keeps failing.
+        $this->line('');
+        $this->comment('Queue');
+
+        $jobs = \Illuminate\Support\Facades\DB::table('jobs')->get();
+        $failed = \Illuminate\Support\Facades\DB::table('failed_jobs')->count();
+
+        $this->line(sprintf('  %-28s %d', 'Jobs waiting', $jobs->count()));
+        $this->line(sprintf('  %-28s %d', 'Failed jobs', $failed));
+
+        foreach ($jobs as $job) {
+            $this->line(sprintf(
+                '    attempts: %d   due: %s   queued: %s',
+                $job->attempts,
+                date('H:i:s', $job->available_at),
+                date('H:i:s', $job->created_at)
+            ));
+        }
+
+        if ($jobs->isNotEmpty()) {
+            $allUntouched = $jobs->every(fn ($j) => (int) $j->attempts === 0);
+
+            $problems[] = $allUntouched
+                ? 'Jobs are waiting and none has been attempted, so no worker is running them. Check the cron '
+                    . 'command runs from SSH exactly as written, and that its schedule is every minute.'
+                : 'Jobs are being attempted and released, so the worker runs but the send keeps failing. The '
+                    . 'reason is on the message below, or in storage/logs/laravel.log.';
+        }
+
         // 6. What actually happened to recent messages. "accepted" means Meta
         // took it; only a delivery webhook proves it reached the customer.
         $this->line('');
