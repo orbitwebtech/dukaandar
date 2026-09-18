@@ -63,7 +63,7 @@ class WhatsappSender
             'status' => 'queued',
         ]);
 
-        SendWhatsappMessage::dispatch($message->id);
+        Dispatch::job(SendWhatsappMessage::dispatch($message->id));
 
         return $message;
     }
@@ -96,7 +96,7 @@ class WhatsappSender
             'status' => 'queued',
         ]);
 
-        SendWhatsappMessage::dispatch($message->id);
+        Dispatch::job(SendWhatsappMessage::dispatch($message->id));
 
         return $message;
     }
@@ -143,7 +143,7 @@ class WhatsappSender
             'status' => 'queued',
         ]);
 
-        SendWhatsappMessage::dispatch($message->id);
+        Dispatch::job(SendWhatsappMessage::dispatch($message->id));
 
         return $message;
     }

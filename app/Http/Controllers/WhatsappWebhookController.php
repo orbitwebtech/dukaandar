@@ -54,7 +54,7 @@ class WhatsappWebhookController extends Controller
             abort(401);
         }
 
-        ProcessWhatsappWebhook::dispatch($request->all());
+        \App\Services\WhatsApp\Dispatch::job(ProcessWhatsappWebhook::dispatch($request->all()));
 
         return response()->noContent();
     }
