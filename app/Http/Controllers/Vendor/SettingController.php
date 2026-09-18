@@ -51,6 +51,7 @@ class SettingController extends Controller
             'invoice_prefix', 'invoice_footer', 'whatsapp_template', 'show_cost_price',
             'review_text', 'review_reprompt_interval',
             'whatsapp_invoice_template',
+            'whatsapp_auto_send_invoice',
             'slow_moving_days', 'primary_color',
         ];
 

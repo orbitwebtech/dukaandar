@@ -491,6 +491,7 @@ export default function Settings({ settings = {}, tenant = {}, whatsappAccount =
                                 templates={whatsappTemplates}
                                 connected={whatsappAccount?.status === 'connected'}
                                 invoiceTemplateSetting={settings.whatsapp_invoice_template || ''}
+                                autoSendSetting={settings.whatsapp_auto_send_invoice || '0'}
                             />
                         </div>
                     </Card>

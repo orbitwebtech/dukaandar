@@ -283,7 +283,22 @@ class OrderController extends Controller
             }
         }
 
-        return redirect()->route('orders.show', $order)->with('success', 'Order created successfully.');
+        // Send the invoice without anyone pressing a button, when the shop has
+        // switched that on. A failure here must not lose the order, so the
+        // reason is carried back as a warning rather than thrown.
+        $whatsapp = null;
+
+        if ($store->getSetting('whatsapp_auto_send_invoice') === '1') {
+            $result = \App\Services\WhatsApp\InvoiceSender::send($store, $order, $request->user());
+
+            if (! $result['ok']) {
+                $whatsapp = $result['message'];
+            }
+        }
+
+        $redirect = redirect()->route('orders.show', $order)->with('success', 'Order created successfully.');
+
+        return $whatsapp ? $redirect->with('warning', 'Order saved, but WhatsApp: ' . $whatsapp) : $redirect;
     }
 
     public function show(Store $store, Order $order)

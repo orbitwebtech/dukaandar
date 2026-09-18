@@ -43,10 +43,11 @@ function countPlaceholders(body) {
     return found.length ? Math.max(...found) : 0;
 }
 
-export default function WhatsappTemplates({ templates = [], connected = false, invoiceTemplateSetting = '' }) {
+export default function WhatsappTemplates({ templates = [], connected = false, invoiceTemplateSetting = '', autoSendSetting = '0' }) {
     const url = useStorePath();
     const [open, setOpen] = useState(false);
     const [invoiceTemplate, setInvoiceTemplate] = useState(invoiceTemplateSetting || '');
+    const [autoSend, setAutoSend] = useState(autoSendSetting === '1');
     const approved = templates.filter((t) => t.status === 'APPROVED');
 
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -140,7 +141,31 @@ export default function WhatsappTemplates({ templates = [], connected = false, i
 
             {approved.length > 0 && (
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                    <Label>Template used when sending an invoice</Label>
+                    <label className="flex items-start gap-2.5">
+                        <input
+                            type="checkbox"
+                            checked={autoSend}
+                            onChange={(e) => {
+                                setAutoSend(e.target.checked);
+                                router.post(
+                                    url('/settings'),
+                                    { whatsapp_auto_send_invoice: e.target.checked ? '1' : '0' },
+                                    { preserveScroll: true }
+                                );
+                            }}
+                            className="mt-0.5 h-4 w-4 rounded border border-gray-300 text-primary-600 focus:ring-2 focus:ring-primary-500/30"
+                        />
+                        <span className="text-sm text-gray-700">
+                            <b>Send the invoice automatically when an order is created</b>
+                            <span className="mt-0.5 block text-xs text-gray-500">
+                                No need to open the order and press Send on WhatsApp. Orders for customers
+                                without a WhatsApp number are skipped.
+                            </span>
+                        </span>
+                    </label>
+
+                    <div className="mt-4 border-t border-gray-100 pt-4">
+                        <Label>Template used when sending an invoice</Label>
                     <p className="mb-2 text-xs text-gray-500">
                         Used when the customer has not messaged in the last 24 hours. Inside that window
                         the invoice is sent as a normal message, so no template is needed.
@@ -171,6 +196,7 @@ export default function WhatsappTemplates({ templates = [], connected = false, i
                         >
                             Save
                         </Button>
+                        </div>
                     </div>
                 </div>
             )}

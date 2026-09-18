@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Vendor;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Store;
-use App\Services\WhatsApp\WhatsappSender;
+use App\Services\WhatsApp\InvoiceSender;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 
@@ -20,121 +20,22 @@ class WhatsappMessageController extends Controller
      */
     public function sendInvoice(Request $request, Store $store, Order $order)
     {
-        $account = $store->whatsappAccount;
-
-        if (! $account?->isConnected()) {
-            return back()->withErrors(['whatsapp' => 'Connect WhatsApp in Settings first.']);
-        }
-
-        $order->loadMissing('customer');
-        $customer = $order->customer;
-        $waId = WhatsappSender::toWaId($customer?->whatsapp);
-
-        if ($waId === '') {
-            return back()->withErrors(['whatsapp' => 'This customer has no WhatsApp number.']);
-        }
-
         $validated = $request->validate([
             'template_name' => 'nullable|string|max:60',
             'language' => 'nullable|string|max:12',
         ]);
 
-        $invoiceLink = URL::signedRoute('public.invoice', ['order' => $order->id]);
-        $shopName = $store->getSetting('shop_name', $store->name);
-
-        $conversation = WhatsappSender::conversationFor($store, $waId, $customer);
-        $templateName = $validated['template_name'] ?? $store->getSetting('whatsapp_invoice_template');
-
-        $template = $templateName
-            ? $store->whatsappTemplates()
-                ->where('name', $templateName)
-                ->where('status', 'APPROVED')
-                ->first()
-            : null;
-
-        // Nothing chosen, or the chosen one is gone: fall back to any approved
-        // template, preferring one that carries the PDF. A shop with exactly one
-        // approved invoice template should not have to configure anything.
-        if (! $template) {
-            $template = $store->whatsappTemplates()
-                ->where('status', 'APPROVED')
-                ->get()
-                ->sortByDesc(fn ($t) => $t->hasDocumentHeader() ? 1 : 0)
-                ->first();
-        }
-
-        $caption = $this->fillTemplate(
-            (string) $store->getSetting('whatsapp_template'),
-            $customer?->name,
-            $shopName,
-            $invoiceLink
+        $result = InvoiceSender::send(
+            $store,
+            $order,
+            $request->user(),
+            $validated['template_name'] ?? null,
+            $validated['language'] ?? null
         );
 
-        if ($conversation->isWindowOpen()) {
-            // The window is open, so the PDF can go straight across with the
-            // message as its caption — no template needed.
-            WhatsappSender::queueInvoicePdf(
-                $store, $waId, $order, null, 'en', [], $customer, $request->user()
-            );
-
-            $order->update(['invoice_sent' => true]);
-
-            return back()->with('success', 'Invoice PDF queued for sending on WhatsApp.');
-        }
-
-        if (! $template) {
-            return back()->withErrors([
-                'whatsapp' => 'This customer has not messaged in 24 hours, so an approved template is needed. Create one in Settings → WhatsApp.',
-            ]);
-        }
-
-        // Meta rejects the send outright if the count does not match the
-        // template exactly (#132000), and templates written in WhatsApp Manager
-        // declare whatever their author chose. So follow the template rather
-        // than assuming our own shape.
-        $pool = [
-            $customer?->name ?? 'Customer',
-            $order->order_number,
-            $shopName,
-            $invoiceLink,
-        ];
-
-        $needed = $template->variableCount();
-
-        if ($needed > count($pool)) {
-            return back()->withErrors([
-                'whatsapp' => "The template \"{$template->name}\" expects {$needed} values, but an invoice only provides " . count($pool)
-                    . ' (customer name, order number, shop name, invoice link). Simplify the template or choose another in Settings → WhatsApp.',
-            ]);
-        }
-
-        $params = array_slice($pool, 0, $needed);
-
-        if ($template->hasDocumentHeader()) {
-            // The template carries a PDF header, so attach the real invoice.
-            WhatsappSender::queueInvoicePdf(
-                $store, $waId, $order, $template->name, $template->language,
-                $params, $customer, $request->user()
-            );
-        } else {
-            // Text-only template: the customer gets the invoice as a link. The
-            // link matters more here than the shop name, so it takes the third
-            // slot — otherwise a three-variable template would omit it.
-            $textParams = array_slice(
-                [$customer?->name ?? 'Customer', $order->order_number, $invoiceLink, $shopName],
-                0,
-                $needed
-            );
-
-            WhatsappSender::queueTemplate(
-                $store, $waId, $template->name, $template->language,
-                $textParams, $customer, $request->user(), $order
-            );
-        }
-
-        $order->update(['invoice_sent' => true]);
-
-        return back()->with('success', 'Invoice queued for sending on WhatsApp.');
+        return $result['ok']
+            ? back()->with('success', $result['message'])
+            : back()->withErrors(['whatsapp' => $result['message']]);
     }
 
     /** Replaces the [Placeholder] tokens the store already configures in Settings. */
